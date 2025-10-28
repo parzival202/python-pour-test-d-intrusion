@@ -1,0 +1,13 @@
+{
+  "target": "http://192.168.111.128",
+  "hosts_alive": [],
+  "hosts_info": {},
+  "nmap_raw": {},
+  "meta": {
+    "duration_s": 0.0,
+    "threads": 20
+  },
+  "_meta": {
+    "session_id": "3de64fc4"
+  }
+}

@@ -1,0 +1,17 @@
+# Core HTTP + parsing
+requests>=2.28
+beautifulsoup4>=4.12
+
+# Nmap python binding (optionnel, utile si tu veux appeler nmap depuis Python)
+python-nmap>=0.7.1
+
+# YAML support for config files
+PyYAML>=6.0
+
+# Testing
+pytest>=7.2
+pytest-cov>=4.0
+
+# Convenience / CLI helpers (optional but handy)
+python-dotenv>=1.0
+tqdm>=4.65

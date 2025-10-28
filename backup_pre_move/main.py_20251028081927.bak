@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+import argparse, json, uuid
+from core.config import load_from_cli
+from core.logger import get_logger
+
+cfg = load_from_cli()
+logger = get_logger(__name__, cfg)
+
+def cmd_network(args):
+    session = str(uuid.uuid4())[:8]
+    logger.info(f"NETWORK session={session} target={args.target}")
+    from modules.network.scanner import scan_target
+    res = scan_target(args.target, threads=cfg["scan"]["threads"], timeout=cfg["scan"]["timeout"], nmap_args=args.nmap_args)
+    res.setdefault("_meta", {})["session_id"] = session
+    out = args.output or "network_report.json"
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(res, f, indent=2)
+    logger.info(f"Network scan saved to {out}")
+
+def cmd_web(args):
+    session = str(uuid.uuid4())[:8]
+    logger.info(f"WEB session=%s target=%s", session, args.target)
+    from modules.web.crawler import crawl
+    res = crawl(args.target, depth=args.depth)
+    res.setdefault("_meta", {})["session_id"] = session
+    out = args.output or "web_report.json"
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(res, f, indent=2)
+    logger.info(f"Web scan saved to {out}")
+
+def main():
+    parser = argparse.ArgumentParser(prog="pentest", description="Pentest Framework MVP")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    p_net = sub.add_parser("network", help="Run network scanner")
+    p_net.add_argument("--target", required=True)
+    p_net.add_argument("--output", required=False)
+    p_net.add_argument("--nmap-args", dest="nmap_args", required=False, default=None)
+    p_web = sub.add_parser("web", help="Run web crawler")
+    p_web.add_argument("--target", required=True)
+    p_web.add_argument("--output", required=False)
+    p_web.add_argument("--depth", type=int, default=1)
+    args = parser.parse_args()
+    if args.cmd == "network":
+        cmd_network(args)
+    elif args.cmd == "web":
+        cmd_web(args)
+
+if __name__ == "__main__":
+    main()
