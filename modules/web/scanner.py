@@ -41,31 +41,79 @@ def _find_forms(html: str) -> List[Dict]:
 
 def detect_reflected_xss(url: str, session: requests.Session = None, timeout:int=DEFAULT_TIMEOUT) -> Dict:
     """
-    Try various small payloads in query parameters and in forms.
+    Enhanced XSS detection with comprehensive parameter testing and improved payloads.
     Return summary: {'url':..., 'payloads_tested':n, 'reflected': True/False, 'evidence':snippets}
     """
     s = session or requests.Session()
     findings = {"url": url, "payloads_tested": 0, "reflected": False, "evidence": []}
+
+    # Enhanced XSS payloads
+    xss_payloads = [
+        '<script>alert("xss")</script>',
+        '<img src=x onerror=alert("xss")>',
+        '"><script>alert("xss")</script>',
+        "'><script>alert('xss')</script>",
+        '<svg onload=alert("xss")>',
+        '<iframe src=javascript:alert("xss")>',
+        '<body onload=alert("xss")>',
+        "' onmouseover=alert('xss') '",
+        '<scr<script>ipt>alert("xss")</scr<script>ipt>'
+    ]
+
     try:
-        # test GET param injection by appending a 'q' param
-        for p in _XSS_PAYLOADS:
-            findings["payloads_tested"] += 1
-            try:
-                r = s.get(url, params={"q": p}, timeout=timeout)
-                if r is not None and p in r.text:
-                    findings["reflected"] = True
-                    findings["evidence"].append({"type":"param","payload":p,"snippet":r.text[:500]})
-                    # stop on first positive
-                    return findings
-            except Exception:
-                continue
-        # fetch page and test forms
+        # Parse URL to get existing parameters
+        parsed = urlparse(url)
+        existing_params = {}
+        if parsed.query:
+            from urllib.parse import parse_qs
+            existing_params = parse_qs(parsed.query)
+
+        # Test each parameter with XSS payloads
+        for param_name in existing_params.keys():
+            for p in xss_payloads:
+                findings["payloads_tested"] += 1
+                test_params = existing_params.copy()
+                test_params[param_name] = [p]
+
+                try:
+                    r = s.get(url, params=test_params, timeout=timeout)
+                    if r is not None and p in r.text:
+                        findings["reflected"] = True
+                        findings["evidence"].append({
+                            "type": "param",
+                            "param": param_name,
+                            "payload": p,
+                            "snippet": r.text[:500]
+                        })
+                        return findings
+                except Exception:
+                    continue
+
+        # Test with additional 'q' param if no existing params
+        if not existing_params:
+            for p in xss_payloads:
+                findings["payloads_tested"] += 1
+                try:
+                    r = s.get(url, params={"q": p}, timeout=timeout)
+                    if r is not None and p in r.text:
+                        findings["reflected"] = True
+                        findings["evidence"].append({
+                            "type": "param",
+                            "param": "q",
+                            "payload": p,
+                            "snippet": r.text[:500]
+                        })
+                        return findings
+                except Exception:
+                    continue
+
+        # Test forms
         r = s.get(url, timeout=timeout)
         if not r:
             return findings
         forms = _find_forms(r.text)
         for form in forms:
-            for p in _XSS_PAYLOADS:
+            for p in xss_payloads:
                 findings["payloads_tested"] += 1
                 action = form["action"] or url
                 if not action.startswith("http"):
@@ -78,7 +126,12 @@ def detect_reflected_xss(url: str, session: requests.Session = None, timeout:int
                         rr = s.get(action, params=data, timeout=timeout)
                     if rr is not None and p in rr.text:
                         findings["reflected"] = True
-                        findings["evidence"].append({"type":"form","payload":p,"action":action,"snippet":rr.text[:500]})
+                        findings["evidence"].append({
+                            "type": "form",
+                            "payload": p,
+                            "action": action,
+                            "snippet": rr.text[:500]
+                        })
                         return findings
                 except Exception:
                     continue

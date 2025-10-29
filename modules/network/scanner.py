@@ -76,40 +76,51 @@ def tcp_connect_check(ip: str, port: int, timeout: float = 1.0) -> bool:
 
 def discover_hosts(range_or_ip: str, timeout: float = 0.8, threads: int = DEFAULT_THREADS, probe_port: int = 80) -> List[str]:
     """
-    Discover alive hosts for a given target.
-    - If range_or_ip contains '/', does a simple /24 expansion (prefix.*)
-    - Otherwise, treats it as a single IP
-    Uses ThreadPoolExecutor and the is_host_alive heuristic.
-    Returns a sorted list of IPs that responded.
+    Discover alive hosts in a range or single IP.
+    Supports CIDR notation, IP ranges, and single IPs.
+    Enhanced with proper IP address parsing and safety limits.
     """
-    # prepare candidate list
-    candidates: List[str] = []
-    if "/" in range_or_ip:
-        base = range_or_ip.split("/")[0]
-        parts = base.split(".")
-        if len(parts) == 4:
-            prefix = ".".join(parts[:3])
-            candidates = [f"{prefix}.{i}" for i in range(1, 255)]
+    try:
+        # Parse target - could be IP, CIDR, or range
+        if '/' in range_or_ip:
+            # CIDR notation
+            import ipaddress
+            network = ipaddress.ip_network(range_or_ip, strict=False)
+            candidates = [str(ip) for ip in network.hosts()]
+        elif '-' in range_or_ip:
+            # IP range (e.g., 192.168.1.1-192.168.1.10)
+            start_ip, end_ip = range_or_ip.split('-')
+            import ipaddress
+            start = ipaddress.ip_address(start_ip.strip())
+            end = ipaddress.ip_address(end_ip.strip())
+            candidates = [str(ipaddress.ip_address(int(start) + i)) for i in range(int(end) - int(start) + 1)]
         else:
-            # malformed CIDR -> return empty
-            return []
-    else:
-        candidates = [range_or_ip]
+            # Single IP
+            candidates = [range_or_ip]
 
-    alive: List[str] = []
-    logger.debug("discover_hosts: scanning %d candidates with %d threads", len(candidates), threads)
-    with ThreadPoolExecutor(max_workers=threads) as ex:
-        futures = {ex.submit(is_host_alive, ip, probe_port, timeout): ip for ip in candidates}
-        for fut in as_completed(futures):
-            ip = futures[fut]
-            try:
-                if fut.result():
-                    alive.append(ip)
-            except Exception:
-                # ignore individual errors
-                logger.debug("discover_hosts: error probing %s", ip)
-                pass
-    return sorted(alive)
+        # Limit to reasonable size to prevent abuse
+        if len(candidates) > 1024:
+            logger.warning("Target range too large (%d hosts), limiting to 1024", len(candidates))
+            candidates = candidates[:1024]
+
+        alive: List[str] = []
+        logger.debug("discover_hosts: scanning %d candidates with %d threads", len(candidates), threads)
+        with ThreadPoolExecutor(max_workers=threads) as ex:
+            futures = {ex.submit(is_host_alive, ip, probe_port, timeout): ip for ip in candidates}
+            for fut in as_completed(futures):
+                ip = futures[fut]
+                try:
+                    if fut.result():
+                        alive.append(ip)
+                except Exception:
+                    # ignore individual errors
+                    logger.debug("discover_hosts: error probing %s", ip)
+                    pass
+        return sorted(alive)
+
+    except Exception as e:
+        logger.error("Error in discover_hosts: %s", e)
+        return []
 
 
 def scan_ports(ip: str, ports: Optional[List[int]] = None, timeout: float = 1.0, threads: int = DEFAULT_THREADS) -> Dict[int, bool]:
@@ -132,20 +143,26 @@ def scan_ports(ip: str, ports: Optional[List[int]] = None, timeout: float = 1.0,
     return results
 
 
-def run_nmap(ip: str, args: str = "-sV -O -Pn") -> Optional[str]:
+def run_nmap(ip: str, args: str = "-sV -O -Pn", timeout: int = 300) -> Optional[str]:
     """
-    Attempt to run the 'nmap' binary if installed. Returns raw stdout string or None on failure.
-    Keep this optional: if nmap isn't installed, caller should handle None.
+    Run nmap on target IP with specified arguments.
+    Enhanced with configurable timeout and better error handling.
+    Returns raw nmap output or None if failed.
     """
     try:
         cmd = ["nmap"] + args.split() + [str(ip)]
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-        return proc.stdout
+        logger.info("Running nmap: %s", " ".join(cmd))
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        if proc.returncode == 0:
+            return proc.stdout
+        else:
+            logger.warning("nmap failed for %s: %s", ip, proc.stderr)
+            return None
     except FileNotFoundError:
         logger.debug("run_nmap: nmap binary not found")
         return None
     except subprocess.TimeoutExpired:
-        logger.debug("run_nmap: nmap timed out for %s", ip)
+        logger.warning("nmap timed out for %s", ip)
         return None
     except Exception as e:
         logger.debug("run_nmap: exception %s", e)

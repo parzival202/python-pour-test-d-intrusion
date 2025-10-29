@@ -1,0 +1,34 @@
+{
+  "scan": {
+    "timeout": 2,
+    "threads": 20,
+    "rate_limit": 100
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "pentest.log",
+    "json_lines": false
+  },
+  "reporting": {
+    "html_template": "report_template.html",
+    "pdf_enabled": false
+  },
+  "recon": {
+    "dns_timeout": 5,
+    "subdomain_wordlist": [
+      "www",
+      "mail",
+      "dev",
+      "test",
+      "beta"
+    ]
+  },
+  "web": {
+    "crawl_depth": 2,
+    "scan_timeout": 5
+  },
+  "exploit": {
+    "safe_mode": true,
+    "reverse_shell_port": 4444
+  }
+}
