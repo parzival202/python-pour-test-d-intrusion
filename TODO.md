@@ -1,105 +1,75 @@
-# TODO.md - GUI Configuration Panel Audit
+# TODO.md - Git Synchronization Issue
 
-## 🔍 PHASE 1: CRITICAL ERROR AUDIT
+## 🔄 PHASE 1: RESOLVE GIT PUSH REJECTION
 
-### 1.1. Configuration Save Error
-- [ ] Identify missing `update()` method in `Config` class
-- [ ] Verify `Config` class import from `core.config`
-- [ ] Analyze "Apply" and "OK" button binding in configuration panel
-- [ ] Examine JSON serialization of Config object
-- [ ] Test manual save via CLI to isolate the issue
+### 1.1. Immediate Actions
+- [ ] Run `git pull` to fetch remote changes
+- [ ] Resolve any merge conflicts if they occur
+- [ ] Run `git push` again after successful pull
+- [ ] Verify all local changes are preserved
 
-### 1.2. Infinite Logging Loop
-- [ ] Identify source of repetitive logs in console
-- [ ] Check logging handlers in `core/logger.py`
-- [ ] Examine recursive calls in GUI update methods
-- [ ] Analyze timers or event loops in GUI code
-- [ ] Control PyQt signals/slots that might be looping
+### 1.2. If Merge Conflicts Occur
+- [ ] Identify conflicting files using `git status`
+- [ ] Manually resolve conflicts in each file
+- [ ] Use `git add .` to stage resolved files
+- [ ] Commit the merge with `git commit -m "Merge remote changes"`
+- [ ] Push with `git push`
 
-## 🔧 PHASE 2: GRAPHICAL INTERFACE AUDIT
+## 🔍 PHASE 2: INVESTIGATE REMOTE CHANGES
 
-### 2.1. Session Management
-- [ ] Verify session list initialization at startup
-- [ ] Test "New Session" button and its parameters
-- [ ] Check "running" status display for session_192_168_111_128
-- [ ] Examine automatic session list refresh
-- [ ] Validate session persistence between restarts
+### 2.1. Check Remote Repository Status
+- [ ] Run `git fetch` to see remote changes without merging
+- [ ] Use `git log --oneline main..origin/main` to see incoming commits
+- [ ] Check what files were modified remotely
+- [ ] Identify who made the remote changes (if collaborative)
 
-### 2.2. Configuration Panel
-- [ ] Audit "General" tab and its controls
-- [ ] Verify "Network" tab (ports, scan_type, os_detection)
-- [ ] Examine "Web" tab (crawl_depth, scan_forms)
-- [ ] Check "Logging" tab (log level, destinations)
-- [ ] Test "OK", "Cancel", "Apply" buttons individually
+### 2.2. Safe Merge Strategies
+- [ ] Option 1: `git pull --rebase` (clean history)
+- [ ] Option 2: `git pull --no-commit` (review before committing)
+- [ ] Option 3: `git stash` → `git pull` → `git stash pop` (temporary save)
 
-### 2.3. GUI Logging System
-- [ ] Verify PentestLogger integration with interface
-- [ ] Check real-time log display in GUI
-- [ ] Examine log level management (INFO, DEBUG, ERROR)
-- [ ] Test log filtering by severity level
-- [ ] Validate log file rotation from GUI
+## 🛡️ PHASE 3: PREVENT FUTURE ISSUES
 
-## 🐛 PHASE 3: SPECIFIC FIXES
+### 3.1. Git Workflow Improvements
+- [ ] Always run `git pull` before starting new work
+- [ ] Use `git status` frequently to check state
+- [ ] Commit changes in smaller, logical chunks
+- [ ] Push changes regularly instead of large batches
 
-### 3.1. Configuration Fixes
-- [ ] Implement missing `update()` method in `Config`
-- [ ] Fix JSON serialization of configuration
-- [ ] Fix automatic save on close
-- [ ] Implement configuration input validation
-- [ ] Add configuration error handling
+### 3.2. Backup Current Work
+- [ ] Create backup branch: `git branch backup-before-merge`
+- [ ] Export current changes to zip file as safety measure
+- [ ] Document current project state before merging
 
-### 3.2. Logging Fixes
-- [ ] Identify and remove infinite logging loop
-- [ ] Fix duplicate log handlers
-- [ ] Implement debounce mechanism for GUI updates
-- [ ] Fix real-time display without saturation
-- [ ] Add "Clear Logs" button in interface
+## 🚀 PHASE 4: EXECUTION STEPS
 
-### 3.3. GUI Improvements
-- [ ] Fix session status display
-- [ ] Implement progress indicator for scans
-- [ ] Add explanatory tooltips on all controls
-- [ ] Fix element alignment and layout
-- [ ] Implement user error handling
+### Step-by-Step Resolution:
+1. **SAFETY FIRST**
+   - [ ] `git branch backup/$(date +%Y%m%d)` - Create backup branch
+   - [ ] `git status` - Check current state
 
-## 🧪 PHASE 4: VALIDATION TESTS
+2. **PULL CHANGES**
+   - [ ] `git pull origin main` - Fetch and merge remote changes
+   - [ ] If conflicts: manually resolve each file marked as conflicted
 
-### 4.1. Functional Tests
-- [ ] Test new session creation
-- [ ] Verify start/stop of complete scan
-- [ ] Test configuration modification
-- [ ] Validate report generation from GUI
-- [ ] Test application close and reopen
+3. **VERIFY MERGE**
+   - [ ] `git log --oneline -10` - Check merge result
+   - [ ] Run tests to ensure nothing broken
 
-### 4.2. Integration Tests
-- [ ] Verify communication between GUI and core modules
-- [ ] Test user parameter persistence
-- [ ] Validate real-time results display
-- [ ] Test network error handling
-- [ ] Verify performance with large data
+4. **PUSH SUCCESS**
+   - [ ] `git push origin main` - Push merged changes
+   - [ ] Verify on GitHub that push was successful
 
-### 4.3. Robustness Tests
-- [ ] Simulate database failure
-- [ ] Test with invalid targets
-- [ ] Validate memory management with long scans
-- [ ] Test forced closure during scan
-- [ ] Verify recovery after crash
+## 📊 POST-RESOLUTION CHECKS
 
-## 📋 FINAL CHECKLIST
+### After Successful Push:
+- [ ] Verify all project files are intact
+- [ ] Run framework tests: `python -m pytest tests/ -v`
+- [ ] Test GUI functionality
+- [ ] Confirm configuration system works
+- [ ] Validate logging system operational
 
-### Before Delivery
-- [ ] No more "Config object has no attribute 'update'" error
-- [ ] No infinite logging loop detected
-- [ ] All sessions display correctly
-- [ ] Configuration saves and loads properly
-- [ ] Scans start and stop correctly
-- [ ] Reports generate from GUI
-- [ ] Interface responds without lag or freeze
-
-### Success Metrics
-- [ ] ✅ Configuration saved without error
-- [ ] ✅ Stable logging without repetition
-- [ ] ✅ Responsive interface (< 100ms response)
-- [ ] ✅ Persistent sessions between restarts
-- [ ] ✅ Complete scan executable from GUI
-- [ ] ✅ Reports generated and accessible
+### If Problems Persist:
+- [ ] Use `git reset --hard origin/main` to match remote (WARNING: loses local changes)
+- [ ] Reapply local changes manually from backup
+- [ ] Consider using GitHub Desktop for visual conflict resolution
