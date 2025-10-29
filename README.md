@@ -1,4 +1,4 @@
-# Penetration Testing Framework
+# Framework de Test d'Intrusion
 
 ## Présentation pédagogique
 
@@ -27,10 +27,11 @@ d’apprentissage pour les étudiants souhaitant se former au pentest.
 
 penetration_testing_framework/
 
-core/ # Gestion centrale : base de données & configuration
-modules/ # Modules d'audit (web, réseau…)
-reporting/ # Génération des rapports JSON / HTML
+core/ # Gestion centrale : base de données, configuration et journalisation
+modules/ # Modules d'audit (réseau, web, reconnaissance, système)
+reporting/ # Génération des rapports JSON / HTML / PDF
 tests/ # Tests unitaires Pytest
+utils/ # Utilitaires divers (fichiers, réseau)
 main.py # Point d’entrée du framework
 
 
@@ -45,8 +46,10 @@ cadre pédagogique.
 |---------|---------|
 | Collecte d'informations | Requêtes HTTP, extraction de données… |
 | OSINT basique | WHOIS, métadonnées web |
+| Scan réseau | Énumération et analyse des ports et services |
+| Scan web | Analyse des vulnérabilités web et crawling |
 | Stockage sécurisé | Archivage des résultats dans une base interne |
-| Reporting automatisé | Formats HTML et JSON |
+| Reporting automatisé | Formats HTML, JSON et PDF |
 
 ---
 

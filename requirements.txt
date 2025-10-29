@@ -1,31 +1,41 @@
+# Bibliothèque pour l'analyse de HTML et XML (parsing web)
 beautifulsoup4>=4.11.1
-pytest>=7.0.0  # dev/test runner (recommended)
+
+# Framework de test unitaire (recommandé pour les tests)
+pytest>=7.0.0
+
+# Bibliothèque pour les requêtes WHOIS (renseignements sur les domaines)
 python-whois>=0.7.3
+
+# Bibliothèque pour les requêtes HTTP (communication réseau)
 requests>=2.28.0
 
-# Core HTTP + parsing
-requests>=2.28
+# Bibliothèque pour l'analyse de HTML et XML (parsing web)
 beautifulsoup4>=4.12
 
-# Nmap python binding (optionnel, utile si tu veux appeler nmap depuis Python)
+# Liaison Python pour Nmap (scanner réseau, optionnel)
 python-nmap>=0.7.1
 
-# YAML support for config files
+# Support YAML pour les fichiers de configuration
 PyYAML>=6.0
 
-# DNS resolution
+# Résolution DNS (résolution des noms de domaine)
 dnspython>=2.3.0
 
-# PDF generation for reports
+# Génération de PDF pour les rapports
 reportlab>=4.0.0
 
-# GUI (optional)
+# Interface graphique (optionnel)
 PyQt5>=5.15.0
 
-# Testing
+# Framework de test unitaire
 pytest>=7.2
+
+# Couverture de code pour les tests
 pytest-cov>=4.0
 
-# Convenience / CLI helpers (optional but handy)
+# Gestion des variables d'environnement (optionnel mais pratique)
 python-dotenv>=1.0
+
+# Barre de progression pour les tâches longues (optionnel mais utile)
 tqdm>=4.65
