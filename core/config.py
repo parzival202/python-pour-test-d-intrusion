@@ -1,12 +1,12 @@
 """
 core/config.py
-Hierarchical configuration loader supporting JSON, YAML, environment variables, and CLI overrides.
+Chargeur de configuration hiérarchique prenant en charge JSON, YAML, les variables d'environnement et les remplacements CLI.
 
-Priority (highest -> lowest):
-  1. CLI overrides via --set key=value (handled by load_from_cli)
-  2. Environment variables prefixed PEN_ (PEN_SCAN__THREADS=20 -> scan.threads)
-  3. Config file (JSON or YAML) passed with --config
-  4. HARD-CODED DEFAULTS
+Priorité (la plus élevée -> la plus basse) :
+  1. Remplacements CLI via --set key=value (géré par load_from_cli)
+  2. Variables d'environnement préfixées PEN_ (PEN_SCAN__THREADS=20 -> scan.threads)
+  3. Fichier de configuration (JSON ou YAML) passé avec --config
+  4. VALEURS PAR DÉFAUT CODÉES EN DUR
 """
 import os
 import json
@@ -17,8 +17,9 @@ try:
     import yaml
     HAS_YAML = True
 except ImportError:
-    HAS_YAML = False
+    HAS_YAML = False  # Si PyYAML n'est pas installé, on ne peut pas charger les fichiers YAML
 
+# Configuration par défaut pour le framework
 DEFAULT = {
     "scan": {"timeout": 2, "threads": 20, "rate_limit": 100},
     "logging": {"level": "INFO", "file": "pentest.log", "json_lines": False},
@@ -30,27 +31,27 @@ DEFAULT = {
 
 class Config:
     def __init__(self, config_path=None, cli_overrides=None):
-        # start from defaults
-        self._cfg = json.loads(json.dumps(DEFAULT))  # deep copy
-        # load config file if provided
+        # commencer par les valeurs par défaut
+        self._cfg = json.loads(json.dumps(DEFAULT))  # copie profonde
+        # charger le fichier de configuration si fourni
         if config_path:
             self._load_config_file(config_path)
-        # environment overrides
+        # remplacements d'environnement
         self._apply_env()
-        # CLI overrides (dotted keys)
+        # remplacements CLI (clés pointillées)
         if cli_overrides:
             for k, v in cli_overrides.items():
                 self._set_by_dotted(k, v)
 
     def _load_config_file(self, path):
-        """Load config from JSON or YAML file."""
+        """Charge la configuration à partir d'un fichier JSON ou YAML."""
         p = Path(path)
         if not p.exists():
             return
         try:
             if path.endswith('.yaml') or path.endswith('.yml'):
                 if not HAS_YAML:
-                    raise ImportError("PyYAML not installed")
+                    raise ImportError("PyYAML n'est pas installé")
                 with open(path, 'r', encoding='utf-8') as f:
                     data = yaml.safe_load(f)
             else:
@@ -58,7 +59,7 @@ class Config:
                     data = json.load(f)
             self._merge(self._cfg, data)
         except Exception:
-            # don't fail hard; keep defaults
+            # ne pas échouer dur ; garder les valeurs par défaut
             pass
 
     def _apply_env(self):
@@ -68,9 +69,10 @@ class Config:
                 continue
             path = k[4:].lower().split('__')
             dotted = '.'.join(path)
-            self._set_by_dotted(dotted, v)
+            self._set_by_dotted(dotted, v)  # Appliquer les variables d'environnement comme remplacements
 
     def _set_by_dotted(self, dotted, value):
+        """Définit une valeur dans la configuration en utilisant une clé pointillée (ex: scan.threads)."""
         parts = dotted.split('.')
         node = self._cfg
         for p in parts[:-1]:
@@ -80,7 +82,7 @@ class Config:
         node[parts[-1]] = self._smart_cast(value)
 
     def _smart_cast(self, v):
-        # cast strings like "true", "10", "3.2" to types
+        """Convertit intelligemment les chaînes en types appropriés (bool, int, float)."""
         if isinstance(v, (int, float, dict, list, bool)):
             return v
         if not isinstance(v, str):
@@ -96,6 +98,7 @@ class Config:
             return v
 
     def _merge(self, base, extra):
+        """Fusionne récursivement deux dictionnaires de configuration."""
         for k, v in extra.items():
             if k in base and isinstance(base[k], dict) and isinstance(v, dict):
                 self._merge(base[k], v)
@@ -103,23 +106,24 @@ class Config:
                 base[k] = v
 
     def get(self):
+        """Retourne la configuration actuelle."""
         return self._cfg
 
     def save_example(self, path="config.example.json"):
-        """Save example config file."""
+        """Sauvegarde un fichier de configuration d'exemple."""
         Path(path).write_text(json.dumps(DEFAULT, indent=2), encoding='utf-8')
 
 
 def load_from_cli(argv=None):
     """
-    Parses --config and --set overrides from argv (or sys.argv if None)
-    Returns the merged configuration dict.
-    Supports JSON and YAML config files.
-    Example of --set: --set scan.threads=40 --set logging.json_lines=true
+    Analyse --config et --set remplacements depuis argv (ou sys.argv si None)
+    Retourne le dictionnaire de configuration fusionné.
+    Prend en charge les fichiers de configuration JSON et YAML.
+    Exemple de --set : --set scan.threads=40 --set logging.json_lines=true
     """
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('--config', help='Path to config JSON/YAML file', default=None)
-    parser.add_argument('--set', action='append', help='Override config value K=V or key.path=val', default=[])
+    parser.add_argument('--config', help='Chemin vers le fichier de configuration JSON/YAML', default=None)
+    parser.add_argument('--set', action='append', help='Remplacer la valeur de configuration K=V ou key.path=val', default=[])
     args, _ = parser.parse_known_args(argv)
     overrides = {}
     for item in args.set or []:
@@ -133,11 +137,11 @@ def load_from_cli(argv=None):
     cfg = Config(config_path=args.config, cli_overrides=overrides)
     return cfg.get()
 
-# Create example config if run directly
+# Créer un exemple de configuration si exécuté directement
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1 and sys.argv[1] == "example":
         Config().save_example()
-        print("Created config.example.json")
+        print("Créé config.example.json")
     else:
         print(json.dumps(load_from_cli(), indent=2))

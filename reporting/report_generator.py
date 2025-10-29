@@ -1,7 +1,7 @@
 """
 reporting/report_generator.py
 Générateur de rapport HTML enrichi pour le projet.
-Usage:
+Utilisation :
   from reporting.report_generator import generate_combined_report
   generate_combined_report(network_json_path='network_report.json',
                            web_json_path='web_report.json',
@@ -21,12 +21,14 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 
 def _load_json(path):
+    """Charger un fichier JSON à partir du chemin donné."""
     try:
         return json.loads(Path(path).read_text(encoding='utf-8'))
     except Exception:
         return None
 
 def _format_table(rows, headers):
+    """Formater une liste de lignes en tableau HTML."""
     th = "".join(f"<th>{html.escape(h)}</th>" for h in headers)
     trs = []
     for row in rows:
@@ -35,6 +37,7 @@ def _format_table(rows, headers):
     return f"<table border='1' cellpadding='6' style='border-collapse:collapse'><thead><tr>{th}</tr></thead><tbody>{''.join(trs)}</tbody></table>"
 
 def _summary_from_network(net):
+    """Extraire un résumé des données réseau."""
     if not net:
         return {"hosts_count": 0, "hosts": []}
     hosts = net.get("hosts_alive", []) or []
@@ -47,6 +50,7 @@ def _summary_from_network(net):
     return {"hosts_count": len(hosts), "hosts": hosts_summary, "meta": net.get("meta", {})}
 
 def _summary_from_web(web):
+    """Extraire un résumé des données web."""
     if not web:
         return {"pages_scanned": 0, "forms_found": 0, "pages": []}
     pages = web.get("pages_scanned", 0)
@@ -54,6 +58,7 @@ def _summary_from_web(web):
     return {"pages_scanned": pages, "forms_found": forms, "meta": web.get("duration_s", None)}
 
 def generate_combined_report(network_json_path=None, web_json_path=None, out_html='report.html'):
+    """Générer un rapport HTML combiné à partir des fichiers JSON réseau et web."""
     net = _load_json(network_json_path) if network_json_path and Path(network_json_path).exists() else None
     web = _load_json(web_json_path) if web_json_path and Path(web_json_path).exists() else None
 
@@ -126,8 +131,8 @@ def generate_combined_report(network_json_path=None, web_json_path=None, out_htm
 
 def compute_risk_score(vulns):
     """
-    Compute risk score from vulnerabilities list.
-    Returns dict with score, percentage, level, and counts.
+    Calculer le score de risque à partir de la liste des vulnérabilités.
+    Retourne un dictionnaire avec score, pourcentage, niveau et comptes.
     """
     if not vulns:
         return {"score": 0, "percentage": 0, "level": "LOW", "counts": {"critical": 0, "high": 0, "medium": 0, "low": 0}}
@@ -158,7 +163,7 @@ def compute_risk_score(vulns):
 
 def generate_executive_summary(session_id, results):
     """
-    Generate executive summary dict for session.
+    Générer un dictionnaire de résumé exécutif pour la session.
     """
     session = results.get("session", {})
     vulns = results.get("vulnerabilities", [])
@@ -197,7 +202,7 @@ def generate_executive_summary(session_id, results):
 
 def generate_pdf(session_id, out_dir='reports'):
     """
-    Generate PDF report for session.
+    Générer un rapport PDF pour la session.
     """
     try:
         results = get_session_results(session_id)
@@ -278,7 +283,7 @@ def generate_pdf(session_id, out_dir='reports'):
 
 def generate(session_id, formats=["html"], out_dir="reports"):
     """
-    Generate reports in specified formats.
+    Générer des rapports dans les formats spécifiés.
     """
     results = get_session_results(session_id)
     if not results:

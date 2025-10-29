@@ -1,6 +1,6 @@
 """
 tests/test_report_pdf.py
-Tests for PDF report generation.
+Tests pour la génération de rapports PDF.
 """
 import pytest
 from pathlib import Path
@@ -11,7 +11,7 @@ from reporting.report_generator import generate_pdf, compute_risk_score, generat
 
 class TestReportPDF:
     def setup_method(self):
-        """Set up test database."""
+        """Configurer la base de données de test."""
         ensure_schema()
         import uuid
         self.session_id = f"test_session_pdf_{uuid.uuid4().hex[:8]}"
@@ -41,7 +41,7 @@ class TestReportPDF:
         close_session(self.session_id, "completed")
 
     def test_compute_risk_score(self):
-        """Test risk score computation."""
+        """Tester le calcul du score de risque."""
         vulns = [
             {"severity": "critical"},
             {"severity": "high"},
@@ -55,7 +55,7 @@ class TestReportPDF:
         assert score["counts"]["critical"] == 1
 
     def test_generate_executive_summary(self):
-        """Test executive summary generation."""
+        """Tester la génération du résumé exécutif."""
         from core.database import get_session_results
         results = get_session_results(self.session_id)
         summary = generate_executive_summary(self.session_id, results)
@@ -68,7 +68,7 @@ class TestReportPDF:
         assert len(summary["recommended_actions"]) > 0
 
     def test_generate_pdf(self):
-        """Test PDF generation."""
+        """Tester la génération PDF."""
         with tempfile.TemporaryDirectory() as tmpdir:
             pdf_path = generate_pdf(self.session_id, tmpdir)
             assert pdf_path is not None
@@ -76,6 +76,6 @@ class TestReportPDF:
             assert Path(pdf_path).stat().st_size > 0  # Non-empty file
 
     def teardown_method(self):
-        """Clean up test data."""
-        # Note: In real tests, you might want to clean up the database
+        """Nettoyer les données de test."""
+        # Note : Dans les vrais tests, vous pourriez vouloir nettoyer la base de données
         pass

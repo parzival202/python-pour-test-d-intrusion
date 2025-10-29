@@ -1,10 +1,10 @@
 """
 modules/reconnaissance/osint.py
-Comprehensive OSINT helpers (safe, non-intrusive).
-- basic_host_info(ip_or_host): DNS reverse + simple socket probe
-- dns_enumeration(domain): Full DNS enumeration (A, AAAA, MX, NS, TXT, CNAME)
-- whois_lookup(domain): Integrated WHOIS lookup
-- probe_subdomains(domain, words=[...]): Enhanced subdomain discovery
+Assistants OSINT complets (sûrs, non intrusifs).
+- basic_host_info(ip_or_host): DNS inverse + sonde socket simple
+- dns_enumeration(domain): Énumération DNS complète (A, AAAA, MX, NS, TXT, CNAME)
+- whois_lookup(domain): Recherche WHOIS intégrée
+- probe_subdomains(domain, words=[...]): Découverte améliorée de sous-domaines
 """
 
 import socket
@@ -18,8 +18,8 @@ from typing import List, Dict, Optional
 
 def basic_host_info(target: str) -> Dict:
     """
-    Return dict with basic resolution info for target (ip or hostname).
-    Non-intrusive: uses socket.gethostbyname and reverse lookup.
+    Retourne un dictionnaire avec les informations de résolution de base pour la cible (IP ou nom d'hôte).
+    Non intrusif : utilise socket.gethostbyname et recherche inverse.
     """
     info = {"target": target}
     try:
@@ -46,8 +46,8 @@ def basic_host_info(target: str) -> Dict:
 
 def dns_enumeration(domain: str) -> Dict:
     """
-    Perform comprehensive DNS enumeration.
-    Returns dict with A, AAAA, MX, NS, TXT, CNAME records.
+    Effectuer une énumération DNS complète.
+    Retourne un dictionnaire avec les enregistrements A, AAAA, MX, NS, TXT, CNAME.
     """
     results = {"domain": domain}
 
@@ -77,8 +77,8 @@ def dns_enumeration(domain: str) -> Dict:
 
 def whois_lookup(domain: str) -> Optional[Dict]:
     """
-    Integrated WHOIS lookup: tries python-whois first, then system whois.
-    Returns structured dict or None if unavailable.
+    Recherche WHOIS intégrée : essaie python-whois d'abord, puis whois système.
+    Retourne un dictionnaire structuré ou None si indisponible.
     """
     # try python-whois first
     try:
@@ -109,9 +109,9 @@ def whois_lookup(domain: str) -> Optional[Dict]:
 
 def probe_subdomains(domain: str, words: Optional[List[str]] = None, timeout: float = 0.8) -> List[Dict]:
     """
-    Enhanced subdomain discovery with DNS resolution.
-    words: list of prefixes to try (defaults to common ones).
-    Returns list of discovered subdomains with IPs and record types.
+    Découverte améliorée de sous-domaines avec résolution DNS.
+    words : liste de préfixes à essayer (par défaut les plus courants).
+    Retourne une liste de sous-domaines découverts avec IPs et types d'enregistrements.
     """
     if words is None:
         # expanded default list
@@ -154,8 +154,8 @@ def probe_subdomains(domain: str, words: Optional[List[str]] = None, timeout: fl
 
 def comprehensive_osint(target: str) -> Dict:
     """
-    Run comprehensive OSINT gathering on target.
-    Includes DNS enumeration, WHOIS, subdomain probing, and basic host info.
+    Exécuter une collecte OSINT complète sur la cible.
+    Inclut l'énumération DNS, WHOIS, la sonde de sous-domaines et les informations de base sur l'hôte.
     """
     results = {"target": target, "timestamp": time.time()}
 
@@ -175,7 +175,7 @@ def comprehensive_osint(target: str) -> Dict:
     return results
 
 def save_json(path: str, data: Dict) -> str:
-    """Save data to JSON file with timestamp."""
+    """Sauvegarder les données dans un fichier JSON avec horodatage."""
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
     return str(Path(path).resolve())

@@ -1,7 +1,7 @@
 """
 core/logger.py
-Centralized logger with audit logging, file rotation, and specific pentest functions.
-Supports console + file logging, JSONL audit logs, and rotation at 10MB.
+Logger centralisé avec journalisation d'audit, rotation de fichiers et fonctions spécifiques au pentest.
+Prend en charge la journalisation console + fichier, les journaux d'audit JSONL et la rotation à 10 Mo.
 """
 import logging
 import sys
@@ -12,7 +12,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 def _json_line(name, level, msg, extra=None):
-    """Generate JSONL audit log entry."""
+    """Générer une entrée de journal d'audit JSONL."""
     entry = {
         "ts": int(time.time()),
         "logger": name,
@@ -24,17 +24,17 @@ def _json_line(name, level, msg, extra=None):
     return json.dumps(entry)
 
 def get_logger(name, cfg=None):
-    """Get or create a configured logger."""
+    """Obtenir ou créer un logger configuré."""
     logger = logging.getLogger(name)
     if getattr(logger, "_configured", False):
         return logger
 
-    # Set level from config or default to INFO
+    # Définir le niveau à partir de la config ou par défaut INFO
     level_str = cfg.get("logging", {}).get("level", "INFO") if cfg else "INFO"
     level = getattr(logging, level_str.upper(), logging.INFO)
     logger.setLevel(level)
 
-    # Console handler
+    # Gestionnaire console
     ch = logging.StreamHandler(sys.stdout)
     if cfg and cfg.get("logging", {}).get("json_lines"):
         class JSONFormatter(logging.Formatter):
@@ -46,7 +46,7 @@ def get_logger(name, cfg=None):
         ch.setFormatter(fmt)
     logger.addHandler(ch)
 
-    # File handler with rotation (10MB max)
+    # Gestionnaire de fichier avec rotation (10 Mo max)
     log_file = cfg.get("logging", {}).get("file", "pentest.log") if cfg else "pentest.log"
     fh = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5)
     fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
@@ -55,23 +55,23 @@ def get_logger(name, cfg=None):
     logger._configured = True
     return logger
 
-# Specific pentest logging functions
+# Fonctions de journalisation spécifiques au pentest
 def log_scan_start(logger, target, scan_type):
-    """Log scan start event."""
-    logger.info(f"SCAN_START: Starting {scan_type} scan on {target}")
-    # Audit log
+    """Journaliser l'événement de début de scan."""
+    logger.info(f"SCAN_START: Démarrage du scan {scan_type} sur {target}")
+    # Journal d'audit
     audit_file = "audit.jsonl"
     with open(audit_file, "a", encoding="utf-8") as f:
-        f.write(_json_line("audit", "INFO", f"Scan started: {scan_type} on {target}",
+        f.write(_json_line("audit", "INFO", f"Scan démarré : {scan_type} sur {target}",
                           {"event": "SCAN_START", "target": target, "type": scan_type}) + "\n")
 
 def log_vulnerability(logger, target, vuln_type, severity="medium", details=None):
-    """Log vulnerability finding."""
-    msg = f"VULNERABILITY: {vuln_type} found on {target} (severity: {severity})"
+    """Journaliser la découverte de vulnérabilité."""
+    msg = f"VULNERABILITY: {vuln_type} trouvé sur {target} (sévérité : {severity})"
     if details:
         msg += f" - {details}"
     logger.warning(msg)
-    # Audit log
+    # Journal d'audit
     audit_file = "audit.jsonl"
     with open(audit_file, "a", encoding="utf-8") as f:
         f.write(_json_line("audit", "WARNING", msg,
@@ -79,13 +79,13 @@ def log_vulnerability(logger, target, vuln_type, severity="medium", details=None
                            "severity": severity, "details": details or {}}) + "\n")
 
 def log_exploitation(logger, target, exploit_type, success=False, details=None):
-    """Log exploitation attempt/result."""
+    """Journaliser la tentative/résultat d'exploitation."""
     status = "SUCCESS" if success else "ATTEMPT"
-    msg = f"EXPLOITATION: {status} - {exploit_type} on {target}"
+    msg = f"EXPLOITATION: {status} - {exploit_type} sur {target}"
     if details:
         msg += f" - {details}"
     logger.info(msg)
-    # Audit log
+    # Journal d'audit
     audit_file = "audit.jsonl"
     with open(audit_file, "a", encoding="utf-8") as f:
         f.write(_json_line("audit", "INFO", msg,

@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Entrypoint amélioré pour le Penetration Testing Framework.
+Point d'entrée amélioré pour le Penetration Testing Framework.
 
-Usage (exemples) :
+Utilisation (exemples) :
   python -m penetration_testing_framework.main recon --target example.com --osint
   python -m penetration_testing_framework.main network --target 10.0.0.0/24 --fast
   python -m penetration_testing_framework.main web --target https://example.com --crawl --scan
   python -m penetration_testing_framework.main report --session-id S1 --format html,json --outdir reports
 
-Design:
-- safe-by-default (actions agressives nécessitent --force)
-- fonction run(argv=None) exposée pour tests programmatiques
-- cherche modules sous 'penetration_testing_framework.modules.*' puis 'modules.*'
+Conception :
+- sécurisé par défaut (les actions agressives nécessitent --force)
+- fonction run(argv=None) exposée pour les tests programmatiques
+- recherche les modules sous 'penetration_testing_framework.modules.*' puis 'modules.*'
 """
 from __future__ import annotations
 import argparse
@@ -24,24 +24,26 @@ from typing import Any, List, Optional
 
 PACKAGE_PREFIX = "penetration_testing_framework"
 
-# Import database functions
+# Importer les fonctions de base de données
 try:
     from core.database import create_session, close_session, ensure_schema
 except ImportError:
-    # Fallback if not available
+    # Solution de secours si non disponible
     def create_session(*args, **kwargs): return None
     def close_session(*args, **kwargs): pass
     def ensure_schema(): pass
 
 def try_import(module_path: str):
+    """Essaie d'importer un module à partir du chemin donné."""
     try:
         return importlib.import_module(module_path)
     except Exception:
         return None
 
 def load_config(path: Optional[str] = None) -> dict:
+    """Charge la configuration à partir de fichiers ou utilise les valeurs par défaut."""
     cfg: dict = {}
-    # try package config first
+    # essayer la configuration du package d'abord
     candidates = [
         f"{PACKAGE_PREFIX}.core.config",
         "core.config"
@@ -53,7 +55,7 @@ def load_config(path: Optional[str] = None) -> dict:
                 return mod.load_config(path)
             except Exception:
                 pass
-    # fallback to local config.json
+    # solution de secours vers config.json local
     cand = path or os.path.join(os.getcwd(), "config.json")
     if os.path.exists(cand):
         try:
@@ -64,7 +66,7 @@ def load_config(path: Optional[str] = None) -> dict:
     return cfg
 
 def dispatch(module_candidates: List[str], func_name: str = "run", **kwargs) -> Any:
-    """Try to import candidate modules and call func_name(**kwargs) if present."""
+    """Essaie d'importer les modules candidats et appelle func_name(**kwargs) si présent."""
     for module_path in module_candidates:
         if not module_path:
             continue
@@ -78,9 +80,10 @@ def dispatch(module_candidates: List[str], func_name: str = "run", **kwargs) -> 
                 return func(kwargs)
     return None
 
-# ---- command handlers ----
+# ---- gestionnaires de commandes ----
 
 def run_recon(args: argparse.Namespace, cfg: dict):
+    """Exécute le module de reconnaissance en fonction des arguments."""
     session_id = cfg.get("session_id")
     if args.osint:
         candidates = [
@@ -90,7 +93,7 @@ def run_recon(args: argparse.Namespace, cfg: dict):
             "modules.recon",
         ]
         return dispatch(candidates, target=args.target, safe_mode=not args.force, session_id=session_id)
-    # passive fallback
+    # solution de secours passive
     candidates = [
         f"{PACKAGE_PREFIX}.modules.reconnaissance.passive",
         "modules.reconnaissance.passive"
@@ -98,6 +101,7 @@ def run_recon(args: argparse.Namespace, cfg: dict):
     return dispatch(candidates, target=args.target, safe_mode=not args.force, session_id=session_id)
 
 def run_network(args: argparse.Namespace, cfg: dict):
+    """Exécute le module de scan réseau."""
     scan_type = "full" if args.full else ("fast" if args.fast else "default")
     ports = args.ports.split(",") if args.ports else None
     candidates = [
@@ -108,6 +112,7 @@ def run_network(args: argparse.Namespace, cfg: dict):
     return dispatch(candidates, target=args.target, scan_type=scan_type, ports=ports, safe_mode=not args.force)
 
 def run_web(args: argparse.Namespace, cfg: dict):
+    """Exécute les modules de crawling et de scan web si demandé."""
     # call crawler then scanner if requested
     if args.crawl:
         dispatch([f"{PACKAGE_PREFIX}.modules.web.crawler", "modules.web.crawler"],
@@ -118,6 +123,7 @@ def run_web(args: argparse.Namespace, cfg: dict):
     return True
 
 def run_exploit(args: argparse.Namespace, cfg: dict):
+    """Exécute le module d'exploitation spécifié."""
     module_name = args.module or "system.exploiter"
     candidates = [
         f"{PACKAGE_PREFIX}.modules.{module_name}",
@@ -127,6 +133,7 @@ def run_exploit(args: argparse.Namespace, cfg: dict):
     return dispatch(candidates, target=args.target, safe_mode=not args.force)
 
 def run_report(args: argparse.Namespace, cfg: dict):
+    """Génère un rapport basé sur l'ID de session."""
     rg = try_import(f"{PACKAGE_PREFIX}.reporting.report_generator") or try_import("reporting.report_generator") or try_import("reporting")
     if rg and hasattr(rg, "generate"):
         formats = args.format.split(",") if args.format else ["html"]
@@ -135,6 +142,7 @@ def run_report(args: argparse.Namespace, cfg: dict):
     return None
 
 def run_config(args: argparse.Namespace, cfg: dict):
+    """Gère l'affichage ou la modification de la configuration."""
     core_cfg = try_import(f"{PACKAGE_PREFIX}.core.config") or try_import("core.config")
     if args.show:
         print(json.dumps(cfg or {}, indent=2, ensure_ascii=False))
@@ -160,46 +168,47 @@ def run_config(args: argparse.Namespace, cfg: dict):
         return cfg
     return cfg
 
-# ---- CLI builder ----
+# ---- constructeur CLI ----
 
 def build_parser() -> argparse.ArgumentParser:
+    """Construit l'analyseur d'arguments pour l'interface en ligne de commande."""
     parser = argparse.ArgumentParser(prog="ptf", description="Penetration Testing Framework - CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_recon = sub.add_parser("recon", help="Reconnaissance modules")
+    p_recon = sub.add_parser("recon", help="Modules de reconnaissance")
     p_recon.add_argument("--target", required=True)
     p_recon.add_argument("--osint", action="store_true")
     p_recon.add_argument("--force", action="store_true")
 
-    p_net = sub.add_parser("network", help="Network scanning")
+    p_net = sub.add_parser("network", help="Scan réseau")
     p_net.add_argument("--target", required=True)
     p_net.add_argument("--ports", help="Comma separated ports (eg 22,80,443)")
     p_net.add_argument("--full", action="store_true", help="Full scan profile")
     p_net.add_argument("--fast", action="store_true", help="Fast scan profile")
     p_net.add_argument("--force", action="store_true")
 
-    p_web = sub.add_parser("web", help="Web crawling & scanning")
+    p_web = sub.add_parser("web", help="Crawling et scan web")
     p_web.add_argument("--target", required=True)
     p_web.add_argument("--crawl", action="store_true")
     p_web.add_argument("--scan", action="store_true")
     p_web.add_argument("--depth", type=int, default=2)
     p_web.add_argument("--force", action="store_true")
 
-    p_exp = sub.add_parser("exploit", help="Run exploit module (simulated)")
+    p_exp = sub.add_parser("exploit", help="Exécuter un module d'exploitation (simulé)")
     p_exp.add_argument("--target", required=True)
     p_exp.add_argument("--module", help="Module name under modules/ to run (e.g., web_exploit)")
     p_exp.add_argument("--force", action="store_true")
 
-    p_rep = sub.add_parser("report", help="Generate report")
+    p_rep = sub.add_parser("report", help="Générer un rapport")
     p_rep.add_argument("--session-id", required=True)
     p_rep.add_argument("--format", default="html", help="Comma-separated formats (html,json,pdf)")
     p_rep.add_argument("--outdir", default="reports")
 
-    p_cfg = sub.add_parser("config", help="Show or set configuration")
+    p_cfg = sub.add_parser("config", help="Afficher ou définir la configuration")
     p_cfg.add_argument("--show", action="store_true")
     p_cfg.add_argument("--set", nargs="*", help="Set key=value pairs", default=[])
 
-    p_all = sub.add_parser("all", help="Run full pipeline")
+    p_all = sub.add_parser("all", help="Exécuter le pipeline complet")
     p_all.add_argument("--target", required=True)
     p_all.add_argument("--quick", action="store_true")
     p_all.add_argument("--force", action="store_true")
@@ -208,7 +217,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def print_results(results: Any, command: str):
     """
-    Print formatted results to console based on command type.
+    Imprime les résultats formatés sur la console en fonction du type de commande.
     """
     if not results:
         print("❌ No results to display")
@@ -236,7 +245,7 @@ def print_results(results: Any, command: str):
             print(results)
 
 def print_recon_results(results: Any):
-    """Print reconnaissance results."""
+    """Imprime les résultats de reconnaissance."""
     if isinstance(results, dict):
         if 'error' in results:
             print(f"❌ Error: {results['error']}")
@@ -278,7 +287,7 @@ def print_recon_results(results: Any):
         print(f"✅ Reconnaissance completed: {results}")
 
 def print_network_results(results: Any):
-    """Print network scanning results."""
+    """Imprime les résultats de scan réseau."""
     if isinstance(results, dict):
         if 'error' in results:
             print(f"❌ Error: {results['error']}")
@@ -321,7 +330,7 @@ def print_network_results(results: Any):
         print(f"✅ Network scan completed: {results}")
 
 def print_web_results(results: Any):
-    """Print web scanning results."""
+    """Imprime les résultats de scan web."""
     if isinstance(results, dict):
         if 'error' in results:
             print(f"❌ Error: {results['error']}")
@@ -375,7 +384,7 @@ def print_web_results(results: Any):
         print(f"✅ Web scan completed: {results}")
 
 def print_exploit_results(results: Any):
-    """Print exploit results."""
+    """Imprime les résultats d'exploitation."""
     if isinstance(results, dict):
         if 'error' in results:
             print(f"❌ Error: {results['error']}")
@@ -392,7 +401,7 @@ def print_exploit_results(results: Any):
         print(f"✅ Exploit completed: {results}")
 
 def print_config_results(results: Any):
-    """Print configuration results."""
+    """Imprime les résultats de configuration."""
     if isinstance(results, dict):
         print("⚙️  CONFIGURATION:")
         for key, value in results.items():
@@ -401,15 +410,16 @@ def print_config_results(results: Any):
         print(f"✅ Config operation completed: {results}")
 
 def run(argv: Optional[List[str]] = None):
+    """Fonction principale pour exécuter le framework en fonction des arguments."""
     parser = build_parser()
     args = parser.parse_args(argv)
     cfg = load_config()
-    cfg["session_id"] = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    cfg["session_id"] = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")  # Générer un ID de session unique basé sur l'heure UTC
 
-    # Initialize database schema
+    # Initialiser le schéma de base de données
     ensure_schema()
 
-    # Create session in database
+    # Créer une session dans la base de données pour cette exécution
     session_id = cfg["session_id"]
     create_session(session_id, args.target if hasattr(args, 'target') else 'unknown', cfg)
 
@@ -428,7 +438,7 @@ def run(argv: Optional[List[str]] = None):
     elif args.command == "config":
         results = run_config(args, cfg)
     elif args.command == "all":
-        # conservative pipeline orchestration
+        # orchestration conservatrice du pipeline
         print("🚀 Starting full penetration test pipeline...")
         a = argparse.Namespace(target=args.target, force=args.force, crawl=True, scan=True, depth=2)
         recon_results = run_recon(a, cfg)
@@ -446,11 +456,11 @@ def run(argv: Optional[List[str]] = None):
             "session_id": cfg["session_id"]
         }
 
-    # Print results if we have any
+    # Imprimer les résultats s'il y en a
     if results is not None:
         print_results(results, args.command)
 
-    # Close session in database
+    # Fermer la session dans la base de données
     close_session(session_id, 'completed')
 
     return results

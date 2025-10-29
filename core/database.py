@@ -1,7 +1,7 @@
 """
 core/database.py
-SQLite database helper for storing pentest sessions, scans, vulnerabilities, and exploitations.
-Provides CRUD operations for all entities.
+Assistant SQLite pour la base de données stockant les sessions de pentest, scans, vulnérabilités et exploitations.
+Fournit des opérations CRUD pour toutes les entités.
 """
 import sqlite3
 import json
@@ -9,23 +9,23 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime
 
-# Database path as per TODO requirements
+# Chemin de la base de données selon les exigences TODO
 DB_DIR = Path("./results")
 DB_PATH = DB_DIR / "pentest.db"
 
 def get_connection():
-    """Get database connection with proper configuration."""
+    """Obtenir une connexion à la base de données avec la configuration appropriée."""
     DB_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
 def ensure_schema():
-    """Create all necessary tables if they don't exist."""
+    """Créer toutes les tables nécessaires si elles n'existent pas."""
     conn = get_connection()
     c = conn.cursor()
 
-    # Sessions table
+    # Table des sessions
     c.execute("""CREATE TABLE IF NOT EXISTS sessions (
                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                    session_id TEXT UNIQUE,
@@ -36,7 +36,7 @@ def ensure_schema():
                    status TEXT DEFAULT 'running'
                  )""")
 
-    # Scans table
+    # Table des scans
     c.execute("""CREATE TABLE IF NOT EXISTS scans (
                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                    session_id TEXT,
@@ -47,7 +47,7 @@ def ensure_schema():
                    FOREIGN KEY (session_id) REFERENCES sessions (session_id)
                  )""")
 
-    # Vulnerabilities table
+    # Table des vulnérabilités
     c.execute("""CREATE TABLE IF NOT EXISTS vulnerabilities (
                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                    session_id TEXT,
@@ -62,7 +62,7 @@ def ensure_schema():
                    FOREIGN KEY (scan_id) REFERENCES scans (id)
                  )""")
 
-    # Exploitations table
+    # Table des exploitations
     c.execute("""CREATE TABLE IF NOT EXISTS exploitations (
                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                    session_id TEXT,
@@ -80,9 +80,9 @@ def ensure_schema():
     conn.commit()
     conn.close()
 
-# Session CRUD
+# CRUD des sessions
 def create_session(session_id: str, target: str, config: Optional[Dict] = None) -> int:
-    """Create a new session. Returns session DB ID."""
+    """Créer une nouvelle session. Retourne l'ID de session DB."""
     conn = get_connection()
     c = conn.cursor()
     try:
@@ -98,7 +98,7 @@ def create_session(session_id: str, target: str, config: Optional[Dict] = None) 
         conn.close()
 
 def close_session(session_id: str, status: str = 'finished'):
-    """Close session with status."""
+    """Fermer la session avec le statut."""
     conn = get_connection()
     c = conn.cursor()
     try:
@@ -112,7 +112,7 @@ def close_session(session_id: str, status: str = 'finished'):
         conn.close()
 
 def get_session(session_id: str) -> Optional[Dict]:
-    """Get session details."""
+    """Obtenir les détails de la session."""
     conn = get_connection()
     c = conn.cursor()
     try:
@@ -132,9 +132,9 @@ def get_session(session_id: str) -> Optional[Dict]:
     finally:
         conn.close()
 
-# Scan CRUD
+# CRUD des scans
 def add_scan(session_id: str, scan_type: str, target: str, results: Dict) -> int:
-    """Add scan results and return scan_id."""
+    """Ajouter les résultats du scan et retourner scan_id."""
     conn = get_connection()
     c = conn.cursor()
     try:
@@ -150,7 +150,7 @@ def add_scan(session_id: str, scan_type: str, target: str, results: Dict) -> int
         conn.close()
 
 def get_scans_by_session(session_id: str) -> List[Dict]:
-    """Get all scans for a session."""
+    """Obtenir tous les scans pour une session."""
     conn = get_connection()
     c = conn.cursor()
     try:
@@ -167,9 +167,9 @@ def get_scans_by_session(session_id: str) -> List[Dict]:
     finally:
         conn.close()
 
-# Vulnerability CRUD
+# CRUD des vulnérabilités
 def add_vulnerability(session_id: str, vuln_dict: Dict, scan_id: Optional[int] = None) -> int:
-    """Add vulnerability finding and return vuln_id."""
+    """Ajouter une découverte de vulnérabilité et retourner vuln_id."""
     conn = get_connection()
     c = conn.cursor()
     try:
@@ -188,7 +188,7 @@ def add_vulnerability(session_id: str, vuln_dict: Dict, scan_id: Optional[int] =
         conn.close()
 
 def get_vulnerabilities_by_session(session_id: str) -> List[Dict]:
-    """Get all vulnerabilities for a session."""
+    """Obtenir toutes les vulnérabilités pour une session."""
     conn = get_connection()
     c = conn.cursor()
     try:
@@ -208,9 +208,9 @@ def get_vulnerabilities_by_session(session_id: str) -> List[Dict]:
     finally:
         conn.close()
 
-# Exploitation CRUD
+# CRUD des exploitations
 def add_exploitation(session_id: str, vuln_id: int, exploit_dict: Dict) -> int:
-    """Add exploitation attempt and return exploit_id."""
+    """Ajouter une tentative d'exploitation et retourner exploit_id."""
     conn = get_connection()
     c = conn.cursor()
     try:
@@ -229,7 +229,7 @@ def add_exploitation(session_id: str, vuln_id: int, exploit_dict: Dict) -> int:
         conn.close()
 
 def get_exploitations_by_session(session_id: str) -> List[Dict]:
-    """Get all exploitations for a session."""
+    """Obtenir toutes les exploitations pour une session."""
     conn = get_connection()
     c = conn.cursor()
     try:
@@ -249,9 +249,9 @@ def get_exploitations_by_session(session_id: str) -> List[Dict]:
     finally:
         conn.close()
 
-# Utility functions
+# Fonctions utilitaires
 def get_session_summary(session_id: str) -> Dict:
-    """Get comprehensive session summary."""
+    """Obtenir un résumé complet de la session."""
     session = get_session(session_id)
     if not session:
         return {}
@@ -264,7 +264,7 @@ def get_session_summary(session_id: str) -> Dict:
     }
 
 def cleanup_old_sessions(days: int = 30):
-    """Remove sessions older than specified days."""
+    """Supprimer les sessions plus anciennes que le nombre de jours spécifié."""
     from datetime import timedelta
     cutoff = datetime.utcnow() - timedelta(days=days)
     conn = get_connection()
@@ -281,5 +281,5 @@ def cleanup_old_sessions(days: int = 30):
         conn.close()
 
 def get_session_results(session_id: str) -> Dict:
-    """Get complete session results as dict."""
+    """Obtenir les résultats complets de la session sous forme de dictionnaire."""
     return get_session_summary(session_id)

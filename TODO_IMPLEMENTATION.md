@@ -1,46 +1,46 @@
-# Implementation TODO — Penetration Testing Framework
+# TODO d'implémentation — Framework de test de pénétration
 
-This file breaks down the approved plan into logical steps for completing the framework based on TODO.md requirements.
+Ce fichier décompose le plan approuvé en étapes logiques pour compléter le framework basé sur les exigences de TODO.md.
 
-## ✅ 1. Core Enhancements (Priority: High)
-- [x] Enhance core/logger.py: Add audit JSONL logging, file rotation (10MB), specific functions (SCAN_START, VULNERABILITY, EXPLOITATION)
-- [x] Enhance core/config.py: Support YAML files, environment variables, CLI overrides, create config.example.json
-- [x] Implement core/database.py: SQLite schema (sessions, scans, vulnerabilities, exploitations), CRUD operations
+## ✅ 1. Améliorations du cœur (Priorité : Haute)
+- [x] Améliorer core/logger.py : Ajouter la journalisation d'audit JSONL, rotation des fichiers (10 Mo), fonctions spécifiques (SCAN_START, VULNERABILITY, EXPLOITATION)
+- [x] Améliorer core/config.py : Prendre en charge les fichiers YAML, variables d'environnement, remplacements CLI, créer config.example.json
+- [x] Implémenter core/database.py : Schéma SQLite (sessions, scans, vulnérabilités, exploitations), opérations CRUD
 
-## ✅ 2. Module Completions (Priority: High)
-- [ ] Enhance modules/reconnaissance/osint.py: Add DNS enumeration, improve subdomain discovery, integrate WHOIS
-- [ ] Enhance modules/reconnaissance/passive.py: Add TLS cert info, improve aggregation
-- [ ] Enhance modules/network/scanner.py: Add OS fingerprinting, service detection, integrate nmap
-- [ ] Enhance modules/web/scanner.py: Add RFI detection, comprehensive parameter testing, improve vuln checks
-- [ ] Implement modules/web/exploiter.py: Real PoC validation, reverse shell support
-- [ ] Implement modules/system/exploiter.py: Buffer overflow, shellcode, real reverse shells (safe)
+## ✅ 2. Achèvements des modules (Priorité : Haute)
+- [x] Améliorer modules/reconnaissance/osint.py : Ajouter l'énumération DNS, améliorer la découverte de sous-domaines, intégrer WHOIS
+- [ ] Améliorer modules/reconnaissance/passive.py : Ajouter les infos de certificat TLS, améliorer l'agrégation
+- [ ] Améliorer modules/network/scanner.py : Ajouter l'empreinte OS, détection de service, intégrer nmap
+- [ ] Améliorer modules/web/scanner.py : Ajouter la détection RFI, test de paramètres complet, améliorer les vérifications de vulnérabilités
+- [ ] Implémenter modules/web/exploiter.py : Validation PoC réelle, support de shell inverse
+- [ ] Implémenter modules/system/exploiter.py : Débordement de tampon, shellcode, vrais shells inverses (sûrs)
 
-## ✅ 3. CLI and Interface (Priority: Medium)
-- [ ] Complete main.py: All CLI commands (scan --full, recon, network, web, exploit, report, config), help menu
-- [ ] Create gui.py: GUI with tkinter/PyQt for visualization
+## ✅ 3. CLI et interface (Priorité : Moyenne)
+- [ ] Compléter main.py : Toutes les commandes CLI (scan --full, recon, network, web, exploit, report, config), menu d'aide
+- [ ] Créer gui.py : GUI avec tkinter/PyQt pour la visualisation
 
-## ✅ 4. Reporting Enhancements (Priority: Medium)
-- [ ] Enhance reporting/report_generator.py: PDF generation, executive summary, risk scoring, screenshots
-- [ ] Create reporting/templates/: HTML/PDF templates
+## ✅ 4. Améliorations des rapports (Priorité : Moyenne)
+- [ ] Améliorer reporting/report_generator.py : Génération PDF, résumé exécutif, notation des risques, captures d'écran
+- [ ] Créer reporting/templates/ : Modèles HTML/PDF
 
-## ✅ 5. Testing and Validation (Priority: Medium)
-- [ ] Add tests/test_*.py: Comprehensive unit, functional, integration tests (>80% coverage)
+## ✅ 5. Tests et validation (Priorité : Moyenne)
+- [ ] Ajouter tests/test_*.py : Tests unitaires, fonctionnels, d'intégration complets (>80% de couverture)
 
-## ✅ 6. Documentation and Legal (Priority: Low)
-- [ ] Create docs/INSTALLATION.md, USER_GUIDE.md, API_REFERENCE.md, CONTRIBUTING.md, CHANGELOG.md, LICENSE
-- [ ] Enhance README.md: Warnings, examples
-- [ ] Add legal warnings in CLI and docs
+## ✅ 6. Documentation et légal (Priorité : Faible)
+- [ ] Créer docs/INSTALLATION.md, USER_GUIDE.md, API_REFERENCE.md, CONTRIBUTING.md, CHANGELOG.md, LICENSE
+- [ ] Améliorer README.md : Avertissements, exemples
+- [ ] Ajouter des avertissements légaux dans CLI et docs
 
-## ✅ 7. Dependencies and Setup (Priority: High)
-- [ ] Update requirements.txt: Add PyYAML, python-nmap, reportlab, PyQt5
-- [ ] Ensure all __init__.py files have proper imports
+## ✅ 7. Dépendances et configuration (Priorité : Haute)
+- [ ] Mettre à jour requirements.txt : Ajouter PyYAML, python-nmap, reportlab, PyQt5
+- [ ] S'assurer que tous les __init__.py ont des imports appropriés
 
-## ✅ 8. Bonus Features (Priority: Low)
-- [ ] Docker setup, CI/CD GitHub Actions, WAF detection, bruteforce modules
+## ✅ 8. Fonctionnalités bonus (Priorité : Faible)
+- [ ] Configuration Docker, CI/CD GitHub Actions, détection WAF, modules de bruteforce
 
 ---
 
-# Progress Tracking
-- Started: [Date/Time]
-- Completed Steps: 3/XX (Core enhancements done)
-- Next Step: Enhance modules/reconnaissance/osint.py
+# Suivi de la progression
+- Démarré : [Date/Heure]
+- Étapes terminées : 4/XX (Améliorations du cœur et modules de reconnaissance terminés)
+- Prochaine étape : Améliorer modules/reconnaissance/passive.py

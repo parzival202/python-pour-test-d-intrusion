@@ -1,15 +1,15 @@
 """
 modules/web/scanner.py
-Heuristic web vulnerability scanner (MVP).
-Non-destructive, safe checks:
- - detect_reflected_xss (improved)
- - detect_basic_sqli (naive payload injection)
- - detect_lfi (common LFI payload probes)
- - scan_page(url, session) -> returns findings dict
+Scanner heuristique de vulnérabilités web (MVP).
+Vérifications sûres et non destructives :
+ - detect_reflected_xss (amélioré)
+ - detect_basic_sqli (injection de payload naïve)
+ - detect_lfi (sondes de payload LFI communs)
+ - scan_page(url, session) -> retourne un dictionnaire de découvertes
 
-Notes:
- - Only use on authorized targets.
- - Uses requests + BeautifulSoup (crawler already depends on them).
+Notes :
+ - Utiliser uniquement sur des cibles autorisées.
+ - Utilise requests + BeautifulSoup (le crawler en dépend déjà).
 """
 from typing import Dict, List
 import requests
@@ -28,6 +28,7 @@ _LFI_PAYLOADS = ["../../etc/passwd", "../../etc/passwd%00", "..\\..\\..\\..\\win
 DEFAULT_TIMEOUT = 5
 
 def _find_forms(html: str) -> List[Dict]:
+    """Trouver tous les formulaires dans le HTML."""
     soup = BeautifulSoup(html, "html.parser")
     forms = []
     for f in soup.find_all("form"):
@@ -41,8 +42,8 @@ def _find_forms(html: str) -> List[Dict]:
 
 def detect_reflected_xss(url: str, session: requests.Session = None, timeout:int=DEFAULT_TIMEOUT) -> Dict:
     """
-    Enhanced XSS detection with comprehensive parameter testing and improved payloads.
-    Return summary: {'url':..., 'payloads_tested':n, 'reflected': True/False, 'evidence':snippets}
+    Détection XSS réfléchie améliorée avec test de paramètres complet et payloads améliorés.
+    Retourne un résumé : {'url':..., 'payloads_tested':n, 'reflected': True/False, 'evidence':snippets}
     """
     s = session or requests.Session()
     findings = {"url": url, "payloads_tested": 0, "reflected": False, "evidence": []}
@@ -141,9 +142,9 @@ def detect_reflected_xss(url: str, session: requests.Session = None, timeout:int
 
 def detect_basic_sqli(url: str, session: requests.Session = None, timeout:int=DEFAULT_TIMEOUT) -> Dict:
     """
-    Naive SQLi detection by injecting classic payloads and looking for SQL error signatures
-    or consistent change in response length (very heuristic).
-    Returns dict with findings, but treat as heuristic only.
+    Détection SQLi naïve en injectant des payloads classiques et en cherchant des signatures d'erreur SQL
+    ou un changement cohérent dans la longueur de réponse (très heuristique).
+    Retourne un dictionnaire avec les découvertes, mais traiter comme heuristique uniquement.
     """
     s = session or requests.Session()
     errors_signatures = ["you have an error in your SQL syntax", "sql syntax", "mysql_fetch", "ORA-"]
@@ -191,8 +192,8 @@ def detect_basic_sqli(url: str, session: requests.Session = None, timeout:int=DE
 
 def detect_lfi(url: str, session: requests.Session = None, timeout:int=DEFAULT_TIMEOUT) -> Dict:
     """
-    Heuristic LFI testing: append common LFI payloads to known query parameters or to forms.
-    Non-destructive: only looks for common file content indicators like 'root:' or 'Windows' markers.
+    Test LFI heuristique : ajouter des payloads LFI communs aux paramètres de requête connus ou aux formulaires.
+    Non destructif : ne cherche que des indicateurs de contenu de fichier communs comme 'root:' ou des marqueurs 'Windows'.
     """
     s = session or requests.Session()
     indicators = ["root:x", "[boot loader]","[fonts]","Windows"]
@@ -240,7 +241,7 @@ def detect_lfi(url: str, session: requests.Session = None, timeout:int=DEFAULT_T
 
 def scan_page(url: str, session: requests.Session = None, timeout:int=DEFAULT_TIMEOUT) -> Dict:
     """
-    Run the heuristics on a single page and return aggregated results.
+    Exécuter les heuristiques sur une seule page et retourner les résultats agrégés.
     """
     s = session or requests.Session()
     res = {"url": url, "xss": None, "sqli": None, "lfi": None}

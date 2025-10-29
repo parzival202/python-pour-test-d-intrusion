@@ -1,17 +1,17 @@
 """
 modules/network/scanner.py
-Patched network scanner (MVP) — safe and robust.
+Scanner réseau corrigé (MVP) — sûr et robuste.
 
-Features:
-- discover_hosts(range_or_ip, timeout, threads): discovery using TCP connect on port 80 (heuristic)
-- scan_ports(ip, ports, timeout, threads): parallel TCP connect scan
-- run_nmap(ip, args): wrapper to call nmap binary if installed (optional)
-- scan_target(target, threads, timeout, nmap_args): orchestration that returns structured JSON-like dict
+Fonctionnalités :
+- discover_hosts(range_or_ip, timeout, threads): découverte utilisant TCP connect sur le port 80 (heuristique)
+- scan_ports(ip, ports, timeout, threads): scan TCP connect parallèle
+- run_nmap(ip, args): wrapper pour appeler le binaire nmap si installé (optionnel)
+- scan_target(target, threads, timeout, nmap_args): orchestration qui retourne un dictionnaire structuré JSON-like
 
-Notes:
-- All sockets are closed in finally blocks to avoid ResourceWarning.
-- This module does NOT import any 'tp_sources' package.
-- Designed to be portable and safe for lab/VM testing.
+Notes :
+- Toutes les sockets sont fermées dans les blocs finally pour éviter ResourceWarning.
+- Ce module n'importe PAS le package 'tp_sources'.
+- Conçu pour être portable et sûr pour les tests en lab/VM.
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -32,18 +32,19 @@ if not logger.handlers:
 
 
 def _safe_close(sock: Optional[socket.socket]) -> None:
+    """Fermer en toute sécurité une socket."""
     try:
         if sock:
             sock.close()
     except Exception:
-        # ignore close errors
+        # ignorer les erreurs de fermeture
         pass
 
 
 def is_host_alive(ip: str, port: int = 80, timeout: float = 1.0) -> bool:
     """
-    Heuristic host 'alive' check by attempting a TCP connect to ip:port (default port 80).
-    Returns True if connect succeeds, False otherwise. Ensures socket is always closed.
+    Vérification heuristique de l'hôte 'vivant' en tentant une connexion TCP à ip:port (port par défaut 80).
+    Retourne True si la connexion réussit, False sinon. Assure que la socket est toujours fermée.
     """
     s = None
     try:
@@ -59,8 +60,8 @@ def is_host_alive(ip: str, port: int = 80, timeout: float = 1.0) -> bool:
 
 def tcp_connect_check(ip: str, port: int, timeout: float = 1.0) -> bool:
     """
-    Check if TCP port is open by attempting to connect. Returns True if connect succeeds.
-    Ensures socket is always closed.
+    Vérifier si le port TCP est ouvert en tentant de se connecter. Retourne True si la connexion réussit.
+    Assure que la socket est toujours fermée.
     """
     s = None
     try:
@@ -76,9 +77,9 @@ def tcp_connect_check(ip: str, port: int, timeout: float = 1.0) -> bool:
 
 def discover_hosts(range_or_ip: str, timeout: float = 0.8, threads: int = DEFAULT_THREADS, probe_port: int = 80) -> List[str]:
     """
-    Discover alive hosts in a range or single IP.
-    Supports CIDR notation, IP ranges, and single IPs.
-    Enhanced with proper IP address parsing and safety limits.
+    Découvrir les hôtes vivants dans une plage ou une IP unique.
+    Prend en charge la notation CIDR, les plages IP et les IPs uniques.
+    Amélioré avec l'analyse d'adresse IP appropriée et les limites de sécurité.
     """
     try:
         # Parse target - could be IP, CIDR, or range
@@ -125,8 +126,8 @@ def discover_hosts(range_or_ip: str, timeout: float = 0.8, threads: int = DEFAUL
 
 def scan_ports(ip: str, ports: Optional[List[int]] = None, timeout: float = 1.0, threads: int = DEFAULT_THREADS) -> Dict[int, bool]:
     """
-    Scan specified ports on an IP using TCP connect. Returns dict {port: is_open}.
-    If ports is None, uses DEFAULT_PORTS.
+    Scanner les ports spécifiés sur une IP en utilisant TCP connect. Retourne un dictionnaire {port: is_open}.
+    Si ports est None, utilise DEFAULT_PORTS.
     """
     if ports is None:
         ports = DEFAULT_PORTS
@@ -145,9 +146,9 @@ def scan_ports(ip: str, ports: Optional[List[int]] = None, timeout: float = 1.0,
 
 def run_nmap(ip: str, args: str = "-sV -O -Pn", timeout: int = 300) -> Optional[str]:
     """
-    Run nmap on target IP with specified arguments.
-    Enhanced with configurable timeout and better error handling.
-    Returns raw nmap output or None if failed.
+    Exécuter nmap sur l'IP cible avec les arguments spécifiés.
+    Amélioré avec un timeout configurable et une meilleure gestion d'erreur.
+    Retourne la sortie brute nmap ou None si échoué.
     """
     try:
         cmd = ["nmap"] + args.split() + [str(ip)]
@@ -171,11 +172,11 @@ def run_nmap(ip: str, args: str = "-sV -O -Pn", timeout: int = 300) -> Optional[
 
 def scan_target(target: str, threads: int = DEFAULT_THREADS, timeout: float = DEFAULT_TIMEOUT, nmap_args: Optional[str] = None, probe_port: int = 80) -> Dict:
     """
-    High-level orchestration:
-      - discover hosts in 'target' (IP or /24)
-      - for each host, run port scan
-      - optionally call nmap for deeper info (if nmap_args provided and nmap exists)
-    Returns a dict with keys: target, hosts_alive, hosts_info, nmap_raw, meta
+    Orchestration de haut niveau :
+      - découvrir les hôtes dans 'target' (IP ou /24)
+      - pour chaque hôte, exécuter le scan de ports
+      - optionnellement appeler nmap pour des infos plus profondes (si nmap_args fourni et nmap existe)
+    Retourne un dictionnaire avec les clés : target, hosts_alive, hosts_info, nmap_raw, meta
     """
     start = time.time()
     logger.info("scan_target: starting scan target=%s threads=%s timeout=%s", target, threads, timeout)
@@ -205,17 +206,17 @@ def scan_target(target: str, threads: int = DEFAULT_THREADS, timeout: float = DE
     return result
 
 
-# CLI test utility
+# Utilitaire CLI de test
 if __name__ == "__main__":
     import argparse
     import json
 
-    p = argparse.ArgumentParser(prog="scanner", description="Simple network scanner CLI (MVP)")
-    p.add_argument("--target", required=True, help="IP or CIDR (e.g. 192.168.1.0/24)")
+    p = argparse.ArgumentParser(prog="scanner", description="Scanner réseau simple CLI (MVP)")
+    p.add_argument("--target", required=True, help="IP ou CIDR (ex. 192.168.1.0/24)")
     p.add_argument("--threads", type=int, default=DEFAULT_THREADS)
     p.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
-    p.add_argument("--nmap", dest="nmap_args", default=None, help="pass args to nmap (optional)")
-    p.add_argument("--probe-port", dest="probe_port", type=int, default=80, help="port used for host discovery heuristic (default 80)")
+    p.add_argument("--nmap", dest="nmap_args", default=None, help="passer les args à nmap (optionnel)")
+    p.add_argument("--probe-port", dest="probe_port", type=int, default=80, help="port utilisé pour l'heuristique de découverte d'hôte (par défaut 80)")
     args = p.parse_args()
 
     out = scan_target(args.target, threads=args.threads, timeout=args.timeout, nmap_args=args.nmap_args, probe_port=args.probe_port)
