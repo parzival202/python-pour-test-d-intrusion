@@ -109,6 +109,10 @@ class Config:
         """Retourne la configuration actuelle."""
         return self._cfg
 
+    def update(self, new_config: dict):
+        """Met à jour la configuration avec de nouvelles valeurs."""
+        self._merge(self._cfg, new_config)
+
     def save_example(self, path="config.example.json"):
         """Sauvegarde un fichier de configuration d'exemple."""
         Path(path).write_text(json.dumps(DEFAULT, indent=2), encoding='utf-8')
