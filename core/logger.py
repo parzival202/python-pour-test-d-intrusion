@@ -23,6 +23,91 @@ def _json_line(name, level, msg, extra=None):
         entry.update(extra)
     return json.dumps(entry)
 
+class PentestLogger:
+    """Classe PentestLogger pour la journalisation centralisée."""
+
+    def __init__(self, log_directory="logs", log_file="pentest.log", level="INFO", json_lines=False):
+        self.log_directory = Path(log_directory)
+        self.log_directory.mkdir(parents=True, exist_ok=True)
+        self.log_file = self.log_directory / log_file
+        self.level = getattr(logging, level.upper(), logging.INFO)
+        self.json_lines = json_lines
+        self.logger = self._setup_logger()
+
+    def _setup_logger(self):
+        """Configurer le logger avec gestionnaires console et fichier."""
+        logger = logging.getLogger("PentestLogger")
+        if getattr(logger, "_configured", False):
+            return logger
+        logger.setLevel(self.level)
+
+        # Gestionnaire console
+        ch = logging.StreamHandler(sys.stdout)
+        if self.json_lines:
+            class JSONFormatter(logging.Formatter):
+                def format(self, record):
+                    return _json_line(record.name, record.levelname, record.getMessage())
+            ch.setFormatter(JSONFormatter())
+        else:
+            fmt = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+            ch.setFormatter(fmt)
+        logger.addHandler(ch)
+
+        # Gestionnaire de fichier avec rotation (10 Mo max)
+        fh = RotatingFileHandler(str(self.log_file), maxBytes=10*1024*1024, backupCount=5)
+        fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        logger.addHandler(fh)
+
+        logger._configured = True
+        return logger
+
+    def log_action(self, action, details=None):
+        """Journaliser une action générale."""
+        msg = f"ACTION: {action}"
+        if details:
+            msg += f" - {details}"
+        self.logger.info(msg)
+        # Journal d'audit
+        audit_file = self.log_directory / "audit.jsonl"
+        with open(audit_file, "a", encoding="utf-8") as f:
+            f.write(_json_line("audit", "INFO", msg, {"event": "ACTION", "action": action, "details": details or {}}) + "\n")
+
+    def log_scan_start(self, target, scan_type):
+        """Journaliser l'événement de début de scan."""
+        self.logger.info(f"SCAN_START: Démarrage du scan {scan_type} sur {target}")
+        # Journal d'audit
+        audit_file = self.log_directory / "audit.jsonl"
+        with open(audit_file, "a", encoding="utf-8") as f:
+            f.write(_json_line("audit", "INFO", f"Scan démarré : {scan_type} sur {target}",
+                              {"event": "SCAN_START", "target": target, "type": scan_type}) + "\n")
+
+    def log_vulnerability(self, target, vuln_type, severity="medium", details=None):
+        """Journaliser la découverte de vulnérabilité."""
+        msg = f"VULNERABILITY: {vuln_type} trouvé sur {target} (sévérité : {severity})"
+        if details:
+            msg += f" - {details}"
+        self.logger.warning(msg)
+        # Journal d'audit
+        audit_file = self.log_directory / "audit.jsonl"
+        with open(audit_file, "a", encoding="utf-8") as f:
+            f.write(_json_line("audit", "WARNING", msg,
+                              {"event": "VULNERABILITY", "target": target, "type": vuln_type,
+                               "severity": severity, "details": details or {}}) + "\n")
+
+    def log_exploitation(self, target, exploit_type, success=False, details=None):
+        """Journaliser la tentative/résultat d'exploitation."""
+        status = "SUCCESS" if success else "ATTEMPT"
+        msg = f"EXPLOITATION: {status} - {exploit_type} sur {target}"
+        if details:
+            msg += f" - {details}"
+        self.logger.info(msg)
+        # Journal d'audit
+        audit_file = self.log_directory / "audit.jsonl"
+        with open(audit_file, "a", encoding="utf-8") as f:
+            f.write(_json_line("audit", "INFO", msg,
+                              {"event": "EXPLOITATION", "target": target, "type": exploit_type,
+                               "success": success, "details": details or {}}) + "\n")
+
 def get_logger(name, cfg=None):
     """Obtenir ou créer un logger configuré."""
     logger = logging.getLogger(name)

@@ -2,10 +2,9 @@
 reporting/report_generator.py
 Générateur de rapport HTML enrichi pour le projet.
 Utilisation :
-  from reporting.report_generator import generate_combined_report
-  generate_combined_report(network_json_path='network_report.json',
-                           web_json_path='web_report.json',
-                           out_html='report.html')
+  from reporting.report_generator import ReportGenerator
+  rg = ReportGenerator(session_id="S1")
+  rg.generate_all(formats=["html", "pdf"])
 """
 
 import json
@@ -19,6 +18,148 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
+
+class ReportGenerator:
+    """Classe ReportGenerator pour générer des rapports."""
+
+    def __init__(self, session_id, results_dir="reports"):
+        self.session_id = session_id
+        self.results_dir = Path(results_dir)
+        self.results_dir.mkdir(parents=True, exist_ok=True)
+        self.results = get_session_results(session_id)
+        if not self.results:
+            raise ValueError(f"No results found for session {session_id}")
+
+    def generate_all(self, formats=["html"]):
+        """Générer tous les rapports dans les formats spécifiés."""
+        output_files = {}
+        if "html" in formats:
+            output_files["html"] = self.generate_html()
+        if "json" in formats:
+            output_files["json"] = self.generate_json()
+        if "pdf" in formats:
+            output_files["pdf"] = self.generate_pdf()
+        return output_files
+
+    def generate_json(self):
+        """Générer un rapport JSON."""
+        json_path = self.results_dir / self.session_id / "report.json"
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(self.results, f, indent=2, ensure_ascii=False)
+        return str(json_path)
+
+    def generate_html(self):
+        """Générer un rapport HTML."""
+        summary = generate_executive_summary(self.session_id, self.results)
+        html_path = self.results_dir / self.session_id / "report.html"
+        html_path.parent.mkdir(parents=True, exist_ok=True)
+
+        actions_html = "".join(f"<li>{action}</li>" for action in summary['recommended_actions'])
+        vuln_rows = "".join(f"<tr><td>{v.get('vuln_type')}</td><td>{v.get('severity')}</td><td>{v.get('target')}</td><td>{v.get('description')}</td></tr>" for v in summary['top_vulnerabilities'])
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Penetration Test Report - {self.session_id}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                .summary {{ background: #f0f0f0; padding: 15px; border-radius: 5px; }}
+                .vulnerabilities {{ margin-top: 20px; }}
+                table {{ border-collapse: collapse; width: 100%; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                th {{ background-color: #f2f2f2; }}
+            </style>
+        </head>
+        <body>
+            <h1>Penetration Test Report - Session {self.session_id}</h1>
+            <div class="summary">
+                <h2>Executive Summary</h2>
+                <p><strong>Target:</strong> {summary['target']}</p>
+                <p><strong>Status:</strong> {summary['status']}</p>
+                <p><strong>Risk Level:</strong> {summary['risk_score']['level']} ({summary['risk_score']['percentage']}%)</p>
+                <p><strong>Total Vulnerabilities:</strong> {summary['total_vulnerabilities']}</p>
+                <h3>Recommended Actions</h3>
+                <ul>
+                    {actions_html}
+                </ul>
+            </div>
+            <div class="vulnerabilities">
+                <h2>Vulnerabilities</h2>
+                <table>
+                    <tr><th>Type</th><th>Severity</th><th>Target</th><th>Description</th></tr>
+                    {vuln_rows}
+                </table>
+            </div>
+        </body>
+        </html>
+        """
+
+        html_path.write_text(html_content, encoding='utf-8')
+        return str(html_path)
+
+    def generate_pdf(self):
+        """Générer un rapport PDF."""
+        summary = generate_executive_summary(self.session_id, self.results)
+
+        pdf_path = self.results_dir / self.session_id / "report.pdf"
+        pdf_path.parent.mkdir(parents=True, exist_ok=True)
+
+        doc = SimpleDocTemplate(str(pdf_path), pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
+
+        title = Paragraph(f"Penetration Test Report - Session {self.session_id}", styles['Title'])
+        story.append(title)
+        story.append(Spacer(1, 12))
+
+        story.append(Paragraph("Executive Summary", styles['Heading1']))
+        story.append(Spacer(1, 6))
+
+        summary_text = f"""
+        Target: {summary['target']}<br/>
+        Session Status: {summary['status']}<br/>
+        Start Time: {summary['start_time']}<br/>
+        End Time: {summary['end_time']}<br/>
+        Total Scans: {summary['total_scans']}<br/>
+        Total Vulnerabilities: {summary['total_vulnerabilities']}<br/>
+        Risk Level: {summary['risk_score']['level']} ({summary['risk_score']['percentage']}%)<br/>
+        """
+        story.append(Paragraph(summary_text, styles['Normal']))
+        story.append(Spacer(1, 12))
+
+        story.append(Paragraph("Recommended Actions", styles['Heading2']))
+        for action in summary['recommended_actions']:
+            story.append(Paragraph(f"• {action}", styles['Normal']))
+        story.append(Spacer(1, 12))
+
+        if summary['top_vulnerabilities']:
+            story.append(Paragraph("Top Vulnerabilities", styles['Heading2']))
+            vuln_data = [["Type", "Severity", "Target", "Description"]]
+            for vuln in summary['top_vulnerabilities']:
+                vuln_data.append([
+                    vuln.get('vuln_type', ''),
+                    vuln.get('severity', ''),
+                    vuln.get('target', ''),
+                    vuln.get('description', '')[:50] + "..." if len(vuln.get('description', '')) > 50 else vuln.get('description', '')
+                ])
+
+            vuln_table = Table(vuln_data)
+            vuln_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 14),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            story.append(vuln_table)
+
+        doc.build(story)
+        return str(pdf_path)
 
 def _load_json(path):
     """Charger un fichier JSON à partir du chemin donné."""
