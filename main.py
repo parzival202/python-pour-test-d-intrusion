@@ -21,6 +21,7 @@ import os
 import sys
 from datetime import datetime
 from typing import Any, List, Optional
+from datetime import datetime, timezone
 
 PACKAGE_PREFIX = "penetration_testing_framework"
 
@@ -414,7 +415,7 @@ def run(argv: Optional[List[str]] = None):
     parser = build_parser()
     args = parser.parse_args(argv)
     cfg = load_config()
-    cfg["session_id"] = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")  # Générer un ID de session unique basé sur l'heure UTC
+    cfg["session_id"] = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")  # Générer un ID de session unique basé sur l'heure UTC
 
     # Initialiser le schéma de base de données
     ensure_schema()
