@@ -12,7 +12,7 @@
 ## 2) Télécharger ou cloner le projet
 
 ```bash
-git clone https://github.com/USERNAME/penetration_testing_framework.git
+git clone https://github.com/parzival202/penetration_testing_framework.git
 cd penetration_testing_framework
 ```
 
