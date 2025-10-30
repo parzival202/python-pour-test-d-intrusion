@@ -1,0 +1,1 @@
+{"ts": 1761776387, "logger": "audit", "level": "INFO", "msg": "ACTION: test_action - {'details': 'test'}", "event": "ACTION", "action": "test_action", "details": {"details": "test"}}

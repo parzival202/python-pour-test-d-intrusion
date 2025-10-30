@@ -1,75 +1,130 @@
-# TODO.md - Git Synchronization Issue
+# TODO.md - Report Storage System Audit
 
-## 🔄 PHASE 1: RESOLVE GIT PUSH REJECTION
+## 🔍 PHASE 1: STORAGE LOCATION AUDIT
 
-### 1.1. Immediate Actions
-- [x] Run `git pull` to fetch remote changes
-- [x] Resolve any merge conflicts if they occur
-- [x] Run `git push` again after successful pull
-- [x] Verify all local changes are preserved
+### 1.1. Database Storage Verification
+- [ ] Check if SQLite database exists at `./results/pentest.db`
+- [ ] Verify all required tables are created:
+  - [ ] `sessions` table with proper columns
+  - [ ] `scans` table with foreign key relationships
+  - [ ] `vulnerabilities` table with evidence storage
+  - [ ] `exploitations` table with PoC storage
+- [ ] Test database connection and permissions
+- [ ] Verify data persistence after application restart
 
-### 1.2. If Merge Conflicts Occur
-- [x] Identify conflicting files using `git status`
-- [x] Manually resolve conflicts in each file
-- [x] Use `git add .` to stage resolved files
-- [x] Commit the merge with `git commit -m "Merge remote changes"`
-- [x] Push with `git push`
+### 1.2. File System Storage
+- [ ] Check `./results/` directory structure
+- [ ] Verify `./logs/` directory and files:
+  - [ ] `framework.log` - General activity logs
+  - [ ] `audit.jsonl` - Detailed audit trail
+  - [ ] Log rotation files (.1, .2, etc.)
+- [ ] Check `./reports/` directory for generated reports
+- [ ] Verify file permissions and write access
 
-## 🔍 PHASE 2: INVESTIGATE REMOTE CHANGES
+## 📊 PHASE 2: DATA INTEGRITY AUDIT
 
-### 2.1. Check Remote Repository Status
-- [ ] Run `git fetch` to see remote changes without merging
-- [ ] Use `git log --oneline main..origin/main` to see incoming commits
-- [ ] Check what files were modified remotely
-- [ ] Identify who made the remote changes (if collaborative)
+### 2.1. Session Data Storage
+- [ ] Verify new sessions are created in database
+- [ ] Check session IDs are unique and properly formatted
+- [ ] Test session start/end timestamps
+- [ ] Verify session configuration is stored correctly
+- [ ] Check session status updates (running, completed, failed)
 
-### 2.2. Safe Merge Strategies
-- [x] Option 1: `git pull --rebase` (clean history)
-- [x] Option 2: `git pull --no-commit` (review before committing)
-- [x] Option 3: `git stash` → `git pull` → `git stash pop` (temporary save)
+### 2.2. Scan Results Storage
+- [ ] Verify scan results are saved to `scans` table
+- [ ] Check scan types are properly categorized
+- [ ] Test storage of port scan results
+- [ ] Verify service detection data persistence
+- [ ] Check OS fingerprinting results storage
 
-## 🛡️ PHASE 3: PREVENT FUTURE ISSUES
+### 2.3. Vulnerability Data Storage
+- [ ] Verify vulnerabilities are saved with correct severity
+- [ ] Check evidence field stores proper JSON data
+- [ ] Test remediation suggestions storage
+- [ ] Verify vulnerability-target relationships
+- [ ] Check duplicate vulnerability prevention
 
-### 3.1. Git Workflow Improvements
-- [x] Always run `git pull` before starting new work
-- [x] Use `git status` frequently to check state
-- [x] Commit changes in smaller, logical chunks
-- [x] Push changes regularly instead of large batches
+## 🐛 PHASE 3: COMMON STORAGE ISSUES
 
-### 3.2. Backup Current Work
-- [x] Create backup branch: `git branch backup-before-merge`
-- [x] Export current changes to zip file as safety measure
-- [x] Document current project state before merging
+### 3.1. Database Connection Issues
+- [ ] Test database connection error handling
+- [ ] Verify transaction rollback on failures
+- [ ] Check for database locking issues
+- [ ] Test concurrent access handling
+- [ ] Verify connection timeout settings
 
-## 🚀 PHASE 4: EXECUTION STEPS
+### 3.2. Data Serialization Problems
+- [ ] Check JSON serialization of complex objects
+- [ ] Verify datetime object handling
+- [ ] Test binary data storage (evidence, screenshots)
+- [ ] Check foreign key constraint violations
+- [ ] Verify data type compatibility
 
-### Step-by-Step Resolution:
-1. **SAFETY FIRST**
-   - [x] `git branch backup/$(date +%Y%m%d)` - Create backup branch
-   - [x] `git status` - Check current state
+### 3.3. File System Issues
+- [ ] Test directory creation permissions
+- [ ] Verify file write permissions
+- [ ] Check disk space monitoring
+- [ ] Test file locking during writes
+- [ ] Verify log rotation functionality
 
-2. **PULL CHANGES**
-   - [x] `git pull origin main` - Fetch and merge remote changes
-   - [x] If conflicts: manually resolve each file marked as conflicted
+## 🔧 PHASE 4: STORAGE SYSTEM TESTING
 
-3. **VERIFY MERGE**
-   - [x] `git log --oneline -10` - Check merge result
-   - [x] Run tests to ensure nothing broken
+### 4.1. Functional Tests
+- [ ] Create test session and verify database entry
+- [ ] Run port scan and verify results storage
+- [ ] Detect vulnerabilities and check database persistence
+- [ ] Generate reports and verify file creation
+- [ ] Test data retrieval for reporting
 
-4. **PUSH SUCCESS**
-   - [x] `git push origin main` - Push merged changes
-   - [x] Verify on GitHub that push was successful
+### 4.2. Error Scenario Tests
+- [ ] Test storage with full disk
+- [ ] Verify behavior with corrupted database
+- [ ] Test with missing directories
+- [ ] Check permission denied scenarios
+- [ ] Verify recovery from storage failures
 
-## 📊 POST-RESOLUTION CHECKS
+### 4.3. Performance Tests
+- [ ] Test storage with large scan results
+- [ ] Verify performance with many vulnerabilities
+- [ ] Check memory usage during data storage
+- [ ] Test concurrent session storage
+- [ ] Verify storage speed benchmarks
 
-### After Successful Push:
-- [x] Verify all project files are intact
-- [x] Run framework tests: `python -m pytest tests/ -v`
-- [x] Test GUI functionality
-- [x] Confirm configuration system works
-- [x] Validate logging system operational
+## 📋 PHASE 5: VALIDATION CHECKLIST
 
-### If Problems Persist:
-- [ ] Use `git reset --hard origin/main` to match remote (WARNING: loses local changes)
-- [ ] Reapply local changes manually from backup
-- [ ] Consider using GitHub Desktop for visual conflict resolution
+### 5.1. Data Persistence Verification
+- [ ] ✅ Sessions persist after application restart
+- [ ] ✅ Scan results remain accessible
+- [ ] ✅ Vulnerabilities don't disappear
+- [ ] ✅ Reports can be regenerated from stored data
+- [ ] ✅ Audit trail is complete and accurate
+
+### 5.2. Data Integrity Checks
+- [ ] ✅ No data corruption in database
+- [ ] ✅ All foreign key relationships valid
+- [ ] ✅ No missing scan results
+- [ ] ✅ Vulnerability evidence is complete
+- [ ] ✅ Timestamps are accurate and consistent
+
+### 5.3. Storage System Health
+- [ ] ✅ Database file size is reasonable
+- [ ] ✅ Log files are rotating properly
+- [ ] ✅ No storage leaks detected
+- [ ] ✅ Backup systems working (if implemented)
+- [ ] ✅ Storage performance meets requirements
+
+## 🚨 DEBUGGING SPECIFIC ISSUES
+
+### If Results Aren't Saving:
+- [ ] Check database connection in `core/database.py`
+- [ ] Verify `ResultDatabase` methods are being called
+- [ ] Check for silent exceptions in storage operations
+- [ ] Verify data is being passed to storage methods
+- [ ] Test storage with simple data first
+
+### If Data is Incomplete:
+- [ ] Check JSON serialization of complex objects
+- [ ] Verify all required fields are being saved
+- [ ] Test individual storage methods separately
+- [ ] Check for transaction commits
+- [ ] Verify error handling isn't hiding issues

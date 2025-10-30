@@ -1,0 +1,37 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Penetration Test Report - test_session</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .summary { background: #f0f0f0; padding: 15px; border-radius: 5px; }
+                .vulnerabilities { margin-top: 20px; }
+                table { border-collapse: collapse; width: 100%; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+            </style>
+        </head>
+        <body>
+            <h1>Penetration Test Report - Session test_session</h1>
+            <div class="summary">
+                <h2>Executive Summary</h2>
+                <p><strong>Target:</strong> 127.0.0.1</p>
+                <p><strong>Status:</strong> completed</p>
+                <p><strong>Risk Level:</strong> HIGH (58.3%)</p>
+                <p><strong>Total Vulnerabilities:</strong> 3</p>
+                <h3>Recommended Actions</h3>
+                <ul>
+                    <li>Prioritize patching critical vulnerabilities</li><li>Implement monitoring</li><li>Review access controls</li>
+                </ul>
+            </div>
+            <div class="vulnerabilities">
+                <h2>Vulnerabilities</h2>
+                <table>
+                    <tr><th>Type</th><th>Severity</th><th>Target</th><th>Description</th></tr>
+                    <tr><td>xss</td><td>high</td><td>http://example.com</td><td>Test XSS</td></tr><tr><td>test_vuln</td><td>medium</td><td>127.0.0.1</td><td>Test vulnerability</td></tr><tr><td>test_vuln</td><td>medium</td><td>127.0.0.1</td><td>Test vulnerability</td></tr>
+                </table>
+            </div>
+        </body>
+        </html>
+        

@@ -1,0 +1,137 @@
+{
+  "session": {
+    "id": 41,
+    "session_id": "test_session",
+    "target": "127.0.0.1",
+    "config": {},
+    "start_time": "2025-10-29 22:23:49",
+    "end_time": "2025-10-29 22:23:49.547400",
+    "status": "completed"
+  },
+  "scans": [
+    {
+      "id": 18,
+      "session_id": "test_session",
+      "scan_type": "port_scan",
+      "target": "127.0.0.1",
+      "results": {
+        "ports": [
+          22,
+          80,
+          443
+        ]
+      },
+      "created_at": "2025-10-29 22:17:33"
+    },
+    {
+      "id": 20,
+      "session_id": "test_session",
+      "scan_type": "port_scan",
+      "target": "127.0.0.1",
+      "results": {
+        "ports": [
+          22,
+          80
+        ]
+      },
+      "created_at": "2025-10-29 22:23:10"
+    },
+    {
+      "id": 21,
+      "session_id": "test_session",
+      "scan_type": "port_scan",
+      "target": "127.0.0.1",
+      "results": {
+        "ports": [
+          22,
+          80
+        ]
+      },
+      "created_at": "2025-10-29 22:23:49"
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": 33,
+      "session_id": "test_session",
+      "scan_id": null,
+      "vuln_type": "xss",
+      "severity": "high",
+      "target": "http://example.com",
+      "description": "Test XSS",
+      "details": {
+        "type": "xss",
+        "severity": "high",
+        "target": "http://example.com",
+        "description": "Test XSS"
+      },
+      "created_at": "2025-10-29 22:17:37"
+    },
+    {
+      "id": 35,
+      "session_id": "test_session",
+      "scan_id": null,
+      "vuln_type": "test_vuln",
+      "severity": "medium",
+      "target": "127.0.0.1",
+      "description": "Test vulnerability",
+      "details": {
+        "type": "test_vuln",
+        "severity": "medium",
+        "target": "127.0.0.1",
+        "description": "Test vulnerability"
+      },
+      "created_at": "2025-10-29 22:23:10"
+    },
+    {
+      "id": 36,
+      "session_id": "test_session",
+      "scan_id": null,
+      "vuln_type": "test_vuln",
+      "severity": "medium",
+      "target": "127.0.0.1",
+      "description": "Test vulnerability",
+      "details": {
+        "type": "test_vuln",
+        "severity": "medium",
+        "target": "127.0.0.1",
+        "description": "Test vulnerability"
+      },
+      "created_at": "2025-10-29 22:23:49"
+    }
+  ],
+  "exploitations": [
+    {
+      "id": 2,
+      "session_id": "test_session",
+      "vuln_id": 35,
+      "exploit_type": "test_exploit",
+      "success": true,
+      "command": "test",
+      "output": "success",
+      "details": {
+        "type": "test_exploit",
+        "success": true,
+        "command": "test",
+        "output": "success"
+      },
+      "created_at": "2025-10-29 22:23:11"
+    },
+    {
+      "id": 3,
+      "session_id": "test_session",
+      "vuln_id": 36,
+      "exploit_type": "test_exploit",
+      "success": true,
+      "command": "test",
+      "output": "success",
+      "details": {
+        "type": "test_exploit",
+        "success": true,
+        "command": "test",
+        "output": "success"
+      },
+      "created_at": "2025-10-29 22:23:49"
+    }
+  ]
+}

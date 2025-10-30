@@ -1,0 +1,2 @@
+{"ts": 1761776277, "logger": "audit", "level": "INFO", "msg": "ACTION: test_action - {'key': 'value'}", "event": "ACTION", "action": "test_action", "details": {"key": "value"}}
+{"ts": 1761776576, "logger": "audit", "level": "INFO", "msg": "ACTION: test_storage - {'test': 'data'}", "event": "ACTION", "action": "test_storage", "details": {"test": "data"}}
