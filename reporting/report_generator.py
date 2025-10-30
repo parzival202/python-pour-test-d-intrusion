@@ -198,76 +198,26 @@ def _summary_from_web(web):
     forms = web.get("forms_found", 0)
     return {"pages_scanned": pages, "forms_found": forms, "meta": web.get("duration_s", None)}
 
-def generate_combined_report(network_json_path=None, web_json_path=None, out_html='report.html'):
-    """Générer un rapport HTML combiné à partir des fichiers JSON réseau et web."""
-    net = _load_json(network_json_path) if network_json_path and Path(network_json_path).exists() else None
-    web = _load_json(web_json_path) if web_json_path and Path(web_json_path).exists() else None
+def _load_json(path):
+    try:
+        return json.loads(Path(path).read_text(encoding='utf-8'))
+    except Exception:
+        return None
 
-    net_sum = _summary_from_network(net)
-    web_sum = _summary_from_web(web)
+def generate_combined_report(network_json_path=None, web_json_path=None, out_html='report.html', out_dir=None):
+    net = _load_json(network_json_path) if network_json_path else None
+    web = _load_json(web_json_path) if web_json_path else None
 
-    title = "Scan Report"
     now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    html_parts = [
-        "<!doctype html>",
-        "<html><head><meta charset='utf-8'><title>{}</title>".format(html.escape(title)),
-        "<style>body{font-family:Arial,Helvetica,sans-serif;margin:20px} h1{color:#222} .card{border:1px solid #ddd;padding:12px;margin:8px 0;border-radius:6px} table{width:100%} th{background:#f4f4f4;text-align:left}</style>",
-        "</head><body>",
-        f"<h1>{html.escape(title)}</h1>",
-        f"<p><strong>Generated:</strong> {now}</p>",
-    ]
+    html_content = f"<html><body><h1>PenTest Report</h1><p>Generated: {now}</p></body></html>"
 
-    # Executive summary
-    html_parts.append("<div class='card'><h2>Executive summary</h2>")
-    html_parts.append("<ul>")
-    if net:
-        html_parts.append(f"<li>Network targets: <strong>{html.escape(str(net.get('target','')))}</strong></li>")
-        html_parts.append(f"<li>Hosts discovered: <strong>{net_sum['hosts_count']}</strong></li>")
-    if web:
-        html_parts.append(f"<li>Web target: <strong>{html.escape(str(web.get('target','')))}</strong></li>")
-        html_parts.append(f"<li>Pages scanned: <strong>{web_sum['pages_scanned']}</strong></li>")
-        html_parts.append(f"<li>Forms found: <strong>{web_sum['forms_found']}</strong></li>")
-    html_parts.append("</ul></div>")
-
-    # Network details
-    html_parts.append("<div class='card'><h2>Network - details</h2>")
-    if net and net_sum['hosts_count']>0:
-        headers = ["host", "open_ports"]
-        html_parts.append(_format_table(net_sum["hosts"], headers))
+    if out_dir:
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        outpath = Path(out_dir) / out_html
     else:
-        html_parts.append("<p>No network data available.</p>")
-    html_parts.append("</div>")
+        outpath = Path(out_html)
 
-    # Web details
-    html_parts.append("<div class='card'><h2>Web - details</h2>")
-    if web:
-        # show pages scanned and forms count
-        html_parts.append(f"<p>Pages scanned: <strong>{web_sum['pages_scanned']}</strong></p>")
-        html_parts.append(f"<p>Forms found: <strong>{web_sum['forms_found']}</strong></p>")
-        # include small JSON dump
-        html_parts.append("<h3>Raw web output (excerpt)</h3>")
-        json_excerpt = html.escape(json.dumps(web, indent=2)[:4000])
-        html_parts.append(f"<pre style='max-height:400px;overflow:auto;background:#f8f8f8;padding:8px'>{json_excerpt}</pre>")
-    else:
-        html_parts.append("<p>No web data available.</p>")
-    html_parts.append("</div>")
-
-    # meta / footer
-    html_parts.append("<div class='card'><h2>Metadata</h2>")
-    meta_rows = []
-    if net and isinstance(net.get("_meta"), dict):
-        meta_rows.append({"key":"network_session", "val": str(net.get("_meta"))})
-    if web and isinstance(web.get("_meta"), dict):
-        meta_rows.append({"key":"web_session", "val": str(web.get("_meta"))})
-    meta_rows.append({"key":"report_generated_at", "val": now})
-    html_parts.append(_format_table(meta_rows, ["key","val"]))
-    html_parts.append("</div>")
-
-    html_parts.append("<p>Notes: This report is generated for educational/demo purposes. Only test on authorized targets.</p>")
-    html_parts.append("</body></html>")
-
-    outpath = Path(out_html)
-    outpath.write_text("\n".join(html_parts), encoding='utf-8')
+    outpath.write_text(html_content, encoding='utf-8')
     return str(outpath)
 
 def compute_risk_score(vulns):

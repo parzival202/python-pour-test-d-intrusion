@@ -5,6 +5,7 @@ Helpers to save/load JSON with basic safety.
 import json
 from pathlib import Path
 from datetime import datetime
+import os
 
 def save_json(path: str, data, pretty: bool = True):
     p = Path(path)
@@ -19,7 +20,12 @@ def load_json(path: str):
         return None
     return json.loads(p.read_text(encoding='utf-8'))
 
-def save_timestamped(path_prefix: str, data):
+def make_run_dir(base: str = "results") -> str:
+    """Créer un répertoire d'exécution horodaté sous `base` et retourner son chemin.
+
+    Ex: results/run_20251030T091000Z
+    """
     ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-    path = f"{path_prefix}_{ts}.json"
-    return save_json(path, data)
+    p = Path(base) / f"run_{ts}"
+    p.mkdir(parents=True, exist_ok=True)
+    return str(p.resolve())

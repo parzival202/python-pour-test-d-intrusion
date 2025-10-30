@@ -22,6 +22,7 @@ import sys
 from datetime import datetime
 from typing import Any, List, Optional
 from datetime import datetime, timezone
+from utils.file_utils import make_run_dir
 
 PACKAGE_PREFIX = "penetration_testing_framework"
 
@@ -179,6 +180,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_recon = sub.add_parser("recon", help="Modules de reconnaissance")
     p_recon.add_argument("--target", required=True)
     p_recon.add_argument("--osint", action="store_true")
+    p_recon.add_argument("--output", help="Fichier ou répertoire de sortie pour les résultats (JSON)")
+    p_recon.add_argument("--format", default="json", help="Format(s) de sortie, csv séparés (json,pdf)")
     p_recon.add_argument("--force", action="store_true")
 
     p_net = sub.add_parser("network", help="Scan réseau")
@@ -186,6 +189,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_net.add_argument("--ports", help="Comma separated ports (eg 22,80,443)")
     p_net.add_argument("--full", action="store_true", help="Full scan profile")
     p_net.add_argument("--fast", action="store_true", help="Fast scan profile")
+    p_net.add_argument("--output", help="Fichier ou répertoire de sortie pour les résultats (JSON)")
+    p_net.add_argument("--format", default="json", help="Format(s) de sortie, comma-separated (json,pdf)")
     p_net.add_argument("--force", action="store_true")
 
     p_web = sub.add_parser("web", help="Crawling et scan web")
@@ -193,11 +198,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_web.add_argument("--crawl", action="store_true")
     p_web.add_argument("--scan", action="store_true")
     p_web.add_argument("--depth", type=int, default=2)
+    p_web.add_argument("--output", help="Fichier ou répertoire de sortie pour les résultats (JSON)")
+    p_web.add_argument("--format", default="json", help="Format(s) de sortie, comma-separated (json,pdf)")
     p_web.add_argument("--force", action="store_true")
 
     p_exp = sub.add_parser("exploit", help="Exécuter un module d'exploitation (simulé)")
     p_exp.add_argument("--target", required=True)
     p_exp.add_argument("--module", help="Module name under modules/ to run (e.g., web_exploit)")
+    p_exp.add_argument("--output", help="Fichier ou répertoire de sortie pour les résultats (JSON)")
+    p_exp.add_argument("--format", default="json", help="Format(s) de sortie, comma-separated (json,pdf)")
     p_exp.add_argument("--force", action="store_true")
 
     p_rep = sub.add_parser("report", help="Générer un rapport")
@@ -212,6 +221,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_all = sub.add_parser("all", help="Exécuter le pipeline complet")
     p_all.add_argument("--target", required=True)
     p_all.add_argument("--quick", action="store_true")
+    p_all.add_argument("--output", help="Répertoire de sortie pour les résultats agrégés")
+    p_all.add_argument("--format", default="json", help="Format(s) de sortie pour 'all' (json,pdf)")
     p_all.add_argument("--force", action="store_true")
 
     return parser
@@ -244,6 +255,41 @@ def print_results(results: Any, command: str):
             print(json.dumps(results, indent=2, ensure_ascii=False))
         else:
             print(results)
+
+
+def _write_json_output(results: Any, out_path: str):
+    """Écrit les résultats en JSON dans out_path (fichier)."""
+    try:
+        from pathlib import Path
+        p = Path(out_path)
+        if p.is_dir():
+            # choisir un nom de fichier par défaut
+            p = p / "results.json"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with open(p, 'w', encoding='utf-8') as f:
+            json.dump(results, f, indent=2, ensure_ascii=False, default=str)
+        print(f"[*] Results written to {p}")
+        return str(p)
+    except Exception as e:
+        print(f"[!] Failed to write JSON output: {e}")
+        return None
+
+
+def _try_generate_pdf_from_session(session_id: str, out_dir: str = "reports") -> Optional[str]:
+    """Essaye de générer un PDF via le reporting generator si disponible et retourne le chemin."""
+    rg = try_import(f"{PACKAGE_PREFIX}.reporting.report_generator") or try_import("reporting.report_generator") or try_import("reporting")
+    if not rg:
+        print("[!] Report generator not available for PDF generation")
+        return None
+    try:
+        out = rg.generate(session_id=session_id, formats=["pdf"], out_dir=out_dir)
+        if isinstance(out, dict) and out.get("pdf"):
+            return out.get("pdf")
+        # Some generators return path string
+        return out
+    except Exception as e:
+        print(f"[!] PDF generation failed: {e}")
+        return None
 
 def print_recon_results(results: Any):
     """Imprime les résultats de reconnaissance."""
@@ -420,6 +466,9 @@ def run(argv: Optional[List[str]] = None):
     # Initialiser le schéma de base de données
     ensure_schema()
 
+    # Set up RUN_DIR for logging
+    os.environ["RUN_DIR"] = make_run_dir()
+
     # Créer une session dans la base de données pour cette exécution
     session_id = cfg["session_id"]
     create_session(session_id, args.target if hasattr(args, 'target') else 'unknown', cfg)
@@ -459,6 +508,45 @@ def run(argv: Optional[List[str]] = None):
 
     # Imprimer les résultats s'il y en a
     if results is not None:
+        # Enregistrer les résultats selon les options --format/--output si présentes
+        # formats peut être spécifié sur chaque sous-commande
+        formats = []
+        out_target = None
+        if hasattr(args, 'format') and args.format:
+            formats = [f.strip().lower() for f in args.format.split(',') if f.strip()]
+        if hasattr(args, 'outdir') and args.outdir:
+            out_target = args.outdir
+        if hasattr(args, 'output') and args.output:
+            out_target = args.output
+
+        # Si JSON demandé, écrire le résultat dict
+        if isinstance(results, dict) and ('json' in formats or ('format' in dir(args) and not formats)):
+            if out_target:
+                # si out_target est un répertoire
+                from pathlib import Path
+                p = Path(out_target)
+                if p.is_dir() or out_target.endswith(os.sep):
+                    filename = f"{args.command}_{cfg.get('session_id','session')}.json"
+                    fp = str(p / filename)
+                else:
+                    fp = out_target
+                _write_json_output(results, fp)
+            else:
+                # pas d'out_target fourni -> afficher JSON sur stdout
+                print(json.dumps(results, indent=2, ensure_ascii=False, default=str))
+
+        # Si PDF demandé et on a un session_id, tenter via report generator
+        if 'pdf' in formats:
+            sid = cfg.get('session_id')
+            if sid:
+                out_dir = out_target if out_target else 'reports'
+                pdf_path = _try_generate_pdf_from_session(sid, out_dir=out_dir)
+                if pdf_path:
+                    print(f"[*] PDF generated at: {pdf_path}")
+                else:
+                    print("[!] PDF generation requested but failed or not supported for ad-hoc results.")
+
+        # Always print to console in formatted way as well
         print_results(results, args.command)
 
     # Fermer la session dans la base de données
