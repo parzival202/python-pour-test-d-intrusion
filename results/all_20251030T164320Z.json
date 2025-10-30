@@ -1,0 +1,14 @@
+{
+  "recon": null,
+  "network": null,
+  "web": {
+    "crawl": null,
+    "scan": null
+  },
+  "exploit": null,
+  "report": {
+    "html": "reports\\20251030T164320Z\\report.html",
+    "json": "reports\\20251030T164320Z\\report.json"
+  },
+  "session_id": "20251030T164320Z"
+}
