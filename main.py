@@ -24,6 +24,7 @@ from typing import Any, List, Optional
 from datetime import datetime, timezone
 from utils.file_utils import make_run_dir, save_json
 from core.logger import get_logger
+import shlex
 
 PACKAGE_PREFIX = "penetration_testing_framework"
 
@@ -591,4 +592,90 @@ def run(argv: Optional[List[str]] = None):
     return results
 
 if __name__ == "__main__":
-    run()
+    # If the script is launched without arguments, provide an interactive CLI with examples.
+    import sys
+
+    def interactive_cli(parser: argparse.ArgumentParser):
+        """Simple interactive prompt listing commands, descriptions and example usage."""
+        # Small manual command catalogue and examples
+        commands = {
+            'recon': {
+                'desc': 'Run reconnaissance (OSINT/DNS/subdomain discovery)',
+                'example': 'recon --target example.com --osint'
+            },
+            'network': {
+                'desc': 'Network scanning (ports/services)',
+                'example': 'network --target 192.168.1.0/24 --ports 22,80,443 --full'
+            },
+            'web': {
+                'desc': 'Web crawling and scanning (forms, XSS, SQLi)',
+                'example': 'web --target https://example.com --crawl --scan --depth 3'
+            },
+            'exploit': {
+                'desc': 'Run an exploitation module (simulated)',
+                'example': 'exploit --target example.com --module system.exploiter'
+            },
+            'report': {
+                'desc': 'Generate report from a session id',
+                'example': 'report --session-id 20251030T121726Z --format html,pdf --outdir reports'
+            },
+            'config': {
+                'desc': 'View or set configuration',
+                'example': 'config --show'
+            },
+            'all': {
+                'desc': 'Run full pipeline (recon, network, web, exploit, report)',
+                'example': 'all --target example.com --format json'
+            }
+        }
+
+        print("\nPenetration Testing Framework - Interactive CLI")
+        print("Type a command line (examples below) or 'help', 'commands', 'exit'.\n")
+        print("Available commands:")
+        for name, info in commands.items():
+            print(f"  {name:8} - {info['desc']}")
+        print("\nExamples:")
+        for name, info in commands.items():
+            print(f"  $ python main.py {info['example']}")
+
+        while True:
+            try:
+                line = input('\nptf> ').strip()
+            except (EOFError, KeyboardInterrupt):
+                print('\nExiting interactive CLI')
+                break
+            if not line:
+                continue
+            if line.lower() in ('exit', 'quit'):
+                print('Goodbye')
+                break
+            if line.lower() in ('help', '?'):
+                parser.print_help()
+                continue
+            if line.lower() in ('commands', 'list'):
+                for name, info in commands.items():
+                    print(f"  {name:8} - {info['desc']}  (example: {info['example']})")
+                continue
+
+            # Parse the provided line into argv tokens and dispatch
+            try:
+                tokens = shlex.split(line)
+            except Exception as e:
+                print(f"Could not parse input: {e}")
+                continue
+            if not tokens:
+                continue
+            # Run the command by calling run() with the token list
+            try:
+                run(tokens)
+            except SystemExit:
+                # argparse may call sys.exit(); ignore and continue
+                continue
+            except Exception as e:
+                print(f"Error executing command: {e}")
+
+    if len(sys.argv) == 1:
+        parser = build_parser()
+        interactive_cli(parser)
+    else:
+        run()

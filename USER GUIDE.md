@@ -1,32 +1,3 @@
-# Guide Utilisateur Complet du Framework de Test d'Intrusion
-
-## Introduction : C'est quoi ce framework ?
-
-Bienvenue dans ce guide complet ! Ce Framework de Test d'Intrusion est un outil pédagogique conçu pour apprendre les bases de la cybersécurité de manière pratique et sécurisée. Imaginez-le comme un "simulateur de détective informatique" qui vous aide à découvrir comment les hackers testent la sécurité des systèmes, mais uniquement sur des environnements que vous contrôlez.
-
-### À quoi ça sert ?
-- **Apprendre la cybersécurité** : Comprendre comment fonctionnent les attaques sans faire de mal
-- **Tester vos propres systèmes** : Vérifier la sécurité de vos applications web ou réseaux locaux
-- **S'entraîner** : Pratiquer les techniques de pentest dans un cadre éducatif
-- **Générer des rapports** : Créer des documents professionnels sur les vulnérabilités trouvées
-
-### Qui peut l'utiliser ?
-- Étudiants en cybersécurité
-- Développeurs qui veulent sécuriser leurs applications
-- Administrateurs système
-- Toute personne curieuse de comprendre comment les pirates informatiques travaillent
-
-⚠️ **Important** : Ce framework ne doit être utilisé que sur des systèmes que vous possédez ou pour lesquels vous avez une autorisation écrite. Toute utilisation malveillante est illégale.
-
----
-
-## Prérequis et Installation
-
-### Ce dont vous avez besoin
-- **Python 3.10 ou plus récent** (vérifiez avec `python --version`)
-- **Git** pour télécharger le projet
-- **Connexion Internet** pour installer les dépendances
-````markdown
 # Guide Utilisateur Complet du Framework de Test d'Intrusion (FR)
 
 ## Introduction
