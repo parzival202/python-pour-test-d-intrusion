@@ -26,428 +26,270 @@ Bienvenue dans ce guide complet ! Ce Framework de Test d'Intrusion est un outil 
 - **Python 3.10 ou plus récent** (vérifiez avec `python --version`)
 - **Git** pour télécharger le projet
 - **Connexion Internet** pour installer les dépendances
-- **Un environnement virtuel** (recommandé pour éviter les conflits)
+````markdown
+# Guide Utilisateur Complet du Framework de Test d'Intrusion (FR)
 
-### Installation étape par étape
+## Introduction
 
-1. **Téléchargez le projet**
-   ```bash
-   git clone https://github.com/USERNAME/penetration_testing_framework.git
-   cd penetration_testing_framework
-   ```
-   Remplacez `USERNAME` par le nom d'utilisateur GitHub si nécessaire.
+Ce document explique comment utiliser le framework pas à pas, avec des exemples concrets et les bonnes pratiques. Le projet est conçu pour un usage pédagogique et d'audit sur des environnements autorisés uniquement.
 
-2. **Créez un environnement virtuel** (optionnel mais recommandé)
-   ```bash
-   python -m venv venv
-   # Sur Windows :
-   venv\Scripts\activate
-   # Sur Linux/Mac :
-   source venv/bin/activate
-   ```
+Important : n'utilisez ce framework que sur des systèmes que vous possédez ou pour lesquels vous avez une autorisation écrite.
 
-3. **Installez les dépendances**
-   ```bash
-   pip install -r requirements.txt
-   ```
+---
 
-4. **Vérifiez l'installation**
-   ```bash
-   python main.py --help
-   ```
-   Si vous voyez le menu d'aide, l'installation est réussie !
+## Résumé des nouveautés (mises à jour récentes)
+- Interface interactive : lancez `python main.py` sans arguments pour entrer dans une invite (`ptf>`) où vous pouvez taper des commandes.
+- Option globale `--no-persist` : empêche la persistance des résultats en base pour une exécution ponctuelle.
+- Options d'export : `--format` (json, html, pdf) et `--output` / `--outdir` pour écrire les résultats sur disque.
 
-### Configuration de base
-Le framework fonctionne avec des fichiers de configuration. Un exemple est fourni dans `config.example.json`. Copiez-le pour créer votre configuration :
-```bash
-cp config.example.json config.json
+---
+
+## Prérequis et installation (raccourci)
+
+- Python 3.10+ (vérifier `python --version`)
+- Créez un venv et installez les dépendances :
+
+```pwsh
+python -m venv venv
+venv\Scripts\activate    # Windows
+pip install -r requirements.txt
 ```
 
 ---
 
-## Mode d'emploi : Les commandes expliquées simplement
+## Lancement du framework
 
-Le framework utilise des commandes simples dans le terminal. Chaque commande correspond à une étape du test d'intrusion.
+1) Usage non interactif (commande immédiate) :
 
-### Commande : Reconnaissance (`recon`)
-**Objectif** : Collecter des informations sur une cible sans l'attaquer.
-
-**Quand l'utiliser ?** : Au début de tout test, pour connaître votre cible.
-
-**Exemples concrets** :
-```bash
-# Informations de base sur un site web
-python main.py recon --target example.com
-
-# Recherche active d'informations (OSINT)
-python main.py recon --target example.com --osint
-
-# Mode forcé (attention : peut être détecté)
-python main.py recon --target example.com --osint --force
+```pwsh
+python main.py <commande> [options]
 ```
 
-**Ce que ça fait** :
-- Résout l'adresse IP du domaine
-- Cherche des sous-domaines (www, mail, dev, etc.)
-- Vérifie les enregistrements DNS
-- Recherche des informations WHOIS
+2) Usage interactif (recommandé pour l'exploration) :
 
-### Commande : Scan Réseau (`network`)
-**Objectif** : Découvrir les ordinateurs connectés et leurs ports ouverts.
-
-**Quand l'utiliser ?** : Pour cartographier un réseau local ou distant.
-
-**Exemples concrets** :
-```bash
-# Scanner tout un réseau local
-python main.py network --target 192.168.1.0/24
-
-# Scanner un seul ordinateur
-python main.py network --target 192.168.1.100
-
-# Scan rapide des ports courants
-python main.py network --target 192.168.1.0/24 --fast
-
-# Scan complet de tous les ports
-python main.py network --target 192.168.1.100 --full
-
-# Scanner des ports spécifiques
-python main.py network --target 192.168.1.100 --ports 22,80,443,3389
+```pwsh
+python main.py
+# puis à l'invite : ptf> all --target http://192.168.11.128 --format json
 ```
 
-**Ce que ça fait** :
-- Détecte les ordinateurs actifs sur le réseau
-- Teste si les ports sont ouverts (comme des portes dans un bâtiment)
-- Identifie les services qui tournent (web, SSH, etc.)
-
-### Commande : Scan Web (`web`)
-**Objectif** : Analyser les sites web pour trouver des failles de sécurité.
-
-**Quand l'utiliser ?** : Sur les applications web que vous voulez tester.
-
-**Exemples concrets** :
-```bash
-# Analyser complètement un site (navigation + tests de sécurité)
-python main.py web --target https://example.com --crawl --scan
-
-# Juste explorer le site (navigation automatique)
-python main.py web --target https://example.com --crawl
-
-# Juste tester les failles de sécurité
-python main.py web --target https://example.com --scan
-
-# Exploration profonde (plus de pages)
-python main.py web --target https://example.com --crawl --depth 5
-```
-
-**Ce que ça fait** :
-- Navigue automatiquement sur toutes les pages du site
-- Cherche des formulaires web
-- Teste des vulnérabilités comme :
-  - XSS (injection de code JavaScript)
-  - SQL Injection (accès à la base de données)
-  - LFI (lecture de fichiers du serveur)
-
-### Commande : Exploitation (`exploit`)
-**Objectif** : Tenter d'exploiter les failles trouvées (simulation).
-
-**Quand l'utiliser ?** : Après avoir trouvé des vulnérabilités, pour voir si elles sont exploitables.
-
-**Exemples concrets** :
-```bash
-# Exploitation automatique
-python main.py exploit --target 192.168.1.100
-
-# Utiliser un module spécifique
-python main.py exploit --target https://vulnerable-site.com --module web_exploit
-```
-
-**Ce que ça fait** :
-- Essaie d'exécuter du code sur la cible
-- Teste les vulnérabilités trouvées
-- **Attention** : Cette commande peut être destructive !
-
-### Commande : Rapport (`report`)
-**Objectif** : Créer des rapports professionnels sur vos tests.
-
-**Quand l'utiliser ?** : À la fin de chaque test pour documenter vos découvertes.
-
-**Exemples concrets** :
-```bash
-# Rapport HTML simple
-python main.py report --session-id 20231029T143353Z --format html
-
-# Plusieurs formats
-python main.py report --session-id 20231029T143353Z --format html,json,pdf
-
-# Sauvegarder dans un dossier spécifique
-python main.py report --session-id 20231029T143353Z --format html --outdir ./mes_rapports
-```
-
-**Ce que ça fait** :
-- Compile tous les résultats de la session
-- Génère des rapports lisibles
-- Crée des graphiques et statistiques
-
-### Commande : Configuration (`config`)
-**Objectif** : Personnaliser le comportement du framework.
-
-**Quand l'utiliser ?** : Pour adapter l'outil à vos besoins.
-
-**Exemples concrets** :
-```bash
-# Voir la configuration actuelle
-python main.py config --show
-
-# Changer le nombre de threads (plus rapide mais plus de ressources)
-python main.py config --set scan.threads=50
-
-# Activer les logs détaillés
-python main.py config --set logging.level=DEBUG
-```
-
-### Commande : Pipeline Complet (`all`)
-**Objectif** : Faire un test d'intrusion complet automatiquement.
-
-**Quand l'utiliser ?** : Pour un audit complet rapide.
-
-**Exemples concrets** :
-```bash
-# Test complet sur un site web
-python main.py all --target https://example.com
-
-# Test rapide (moins approfondi)
-python main.py all --target https://example.com --quick
-```
-
-**Ce que ça fait** :
-- Exécute reconnaissance → scan réseau → scan web → exploitation → rapport
-- Idéal pour les débutants
+L'invite interactive affiche une liste d'exemples et accepte des lignes de commandes (elle parse la ligne et l'exécute comme si vous aviez lancé `python main.py ...`).
 
 ---
 
-## Système de Configuration
+## Sous-commandes et options principales
 
-### Comment ça marche ?
-Le framework utilise une hiérarchie de configuration :
-1. **Valeurs par défaut** (dans le code)
-2. **Variables d'environnement** (commencent par `PEN_`)
-3. **Fichier config.json** (dans le dossier du projet)
-4. **Arguments de ligne de commande** (priorité maximale)
+Syntaxe générale : `python main.py <commande> [--target <cible>] [--format json,html,pdf] [--output <path>] [--no-persist]`
+# Guide Utilisateur Complet du Framework de Test d'Intrusion (FR)
 
-### Variables importantes
-```json
-{
-  "scan": {
-    "timeout": 2,           // Temps d'attente max par test
-    "threads": 20,          // Nombre de tests simultanés
-    "rate_limit": 100       // Limite de requêtes par minute
-  },
-  "logging": {
-    "level": "INFO",        // Niveau de détail des logs
-    "file": "pentest.log",  // Fichier de logs
-    "json_lines": false     // Format des logs
-  },
-  "web": {
-    "crawl_depth": 2,       // Profondeur de navigation
-    "scan_timeout": 5       // Timeout pour les tests web
-  }
-}
-```
+## Introduction
 
-### Variables d'environnement
-```bash
-export PEN_SCAN__THREADS=50
-export PEN_LOGGING__LEVEL=DEBUG
-export PEN_WEB__CRAWL_DEPTH=3
+Ce document explique comment utiliser le framework pas à pas, avec des exemples concrets et les bonnes pratiques. Le projet est conçu pour un usage pédagogique et d'audit sur des environnements autorisés uniquement.
+
+Important : n'utilisez ce framework que sur des systèmes que vous possédez ou pour lesquels vous avez une autorisation écrite.
+
+---
+
+## Résumé des nouveautés (mises à jour récentes)
+
+- Interface interactive : lancez `python main.py` sans arguments pour entrer dans une invite (`ptf>`) où vous pouvez taper des commandes.
+- Option globale `--no-persist` : empêche la persistance des résultats en base pour une exécution ponctuelle.
+- Options d'export : `--format` (json, html, pdf) et `--output` / `--outdir` pour écrire les résultats sur disque.
+
+---
+
+## Prérequis et installation (raccourci)
+
+- Python 3.10+ (vérifier `python --version`)
+- Créez un venv et installez les dépendances :
+
+```pwsh
+python -m venv venv
+venv\Scripts\activate    # Windows
+pip install -r requirements.txt
 ```
 
 ---
 
-## Guide de Génération des Rapports
+## Lancement du framework
 
-### Types de rapports
-- **HTML** : Rapport interactif avec graphiques (recommandé)
-- **JSON** : Données brutes pour traitement automatique
-- **PDF** : Rapport imprimable professionnel
+1) Usage non interactif (commande immédiate) :
 
-### Structure d'un rapport
-Chaque rapport contient :
-- **Résumé exécutif** : Vue d'ensemble des découvertes
-- **Détails techniques** : Chaque vulnérabilité expliquée
-- **Recommandations** : Comment corriger les problèmes
-- **Statistiques** : Graphiques et métriques
+```pwsh
+python main.py <commande> [options]
+```
 
-### Exemple de workflow complet
-```bash
-# 1. Test complet
-python main.py all --target https://mon-site.com
+2) Usage interactif (recommandé pour l'exploration) :
 
-# 2. Trouver l'ID de session (dans les logs ou base de données)
-# L'ID ressemble à : 20231029T143353Z
+```pwsh
+python main.py
+# puis à l'invite : ptf> all --target http://192.168.11.128 --format json
+```
 
-# 3. Générer le rapport
-python main.py report --session-id 20231029T143353Z --format html,pdf
+L'invite interactive affiche une liste d'exemples et accepte des lignes de commandes (elle parse la ligne et l'exécute comme si vous aviez lancé `python main.py ...`).
 
-# 4. Ouvrir le rapport
-open reports/20231029T143353Z/report.html
+---
+
+## Sous-commandes et options principales
+
+Syntaxe générale : `python main.py <commande> [--target <cible>] [--format json,html,pdf] [--output <path>] [--no-persist]`
+
+- `--no-persist` : ne pas écrire les résultats dans la base SQLite (`results/pentest.db`).
+- `--format` : formats d'export (ex : `--format json,pdf`).
+- `--output` ou `--outdir` : chemin pour écrire les fichiers de sortie.
+
+Liste des commandes :
+
+- recon : collecte d'informations (ex : DNS, sous-domaines, whois)
+- network : scan réseau (hôtes et ports)
+- web : crawl et scans web (XSS, SQLi, LFI...)
+- exploit : modules d'exploitation (simulation)
+- report : génération de rapports à partir d'un `session_id`
+- config : lecture / écriture de la configuration
+- all : pipeline complet (recon → network → web → exploit → report)
+
+---
+
+## Commandes détaillées avec exemples pratiques
+
+Remarque : remplacez `http://192.168.11.128` par votre cible autorisée.
+
+1) Full pipeline (équivalent de "--all")
+
+```pwsh
+python main.py all --target http://192.168.11.128
+```
+
+Exemple avec export JSON et sans persistance :
+
+```pwsh
+python main.py all --target http://192.168.11.128 --format json --output results/ --no-persist
+```
+
+Que fait `all` : lance la reconnaissance, le scan réseau, le scan web, un module d'exploitation simulé, puis génère un rapport agrégé. La sortie contient toujours un `session_id`.
+
+2) Scan web ciblé (crawl + scan de vulnérabilités)
+
+```pwsh
+python main.py web --target http://192.168.11.128 --crawl --scan --depth 3 --format json --output results/web_scan.json
+```
+
+Options utiles : `--crawl` pour l'exploration, `--scan` pour les tests de vulnérabilités, `--depth` pour la profondeur de crawl.
+
+3) Scan réseau
+
+```pwsh
+python main.py network --target 192.168.11.0/24 --fast
+python main.py network --target 192.168.11.128 --ports 22,80,443
+```
+
+4) Générer un rapport à partir d'une session existante
+
+```pwsh
+python main.py report --session-id 20251030T144234Z --format html,pdf --outdir reports
+```
+
+Le rapport est construit à partir des données persistées en base (table `sessions` → `scans` → `vulnerabilities`...). Si vous avez exécuté avec `--no-persist`, la génération de PDF/HTML via `report` n'aura pas de données disponibles pour cette session.
+
+5) Utiliser l'interface interactive
+
+```pwsh
+python main.py
+# puis à l'invite
+ptf> web --target http://192.168.11.128 --crawl --scan
+ptf> report --session-id 20251030T144234Z --format html
+```
+
+L'invite accepte `help`, `commands`, `exit` et exécute la ligne fournie.
+
+---
+
+## Où sont enregistrés les résultats ?
+
+- Base de données SQLite : `results/pentest.db` — contient les tables `sessions`, `scans`, `vulnerabilities`, `exploitations`.
+- Rapports et exports : dossier `reports/` et/ou le chemin indiqué via `--output` / `--outdir`.
+- Dossiers de run : lors d'une exécution une variable `RUN_DIR` est créée (ex : `runs/run_<timestamp>`) et contient logs et fichiers temporaires.
+
+Comment retrouver une session :
+
+1. Regarder la sortie console : la commande `all` ou `web` renvoie un `session_id` (format UTC : `YYYYMMDDTHHMMSSZ`).
+2. Vérifier la table `sessions` dans `results/pentest.db` (ou utiliser les outils de reporting).
+
+Exemple pour lister rapidement (dans PowerShell) :
+
+```pwsh
+# Afficher la liste des fichiers de report
+ls reports\
+
+# Inspecter rapidement la DB (si sqlite3 est installé)
+sqlite3 results/pentest.db "SELECT session_id, status, start_time FROM sessions ORDER BY start_time DESC LIMIT 10;"
 ```
 
 ---
 
-## Procédures de Sécurité et Limitations
+## Formats et export des résultats
 
-### Règles d'or
-1. **Toujours demander la permission** avant de tester
-2. **Utiliser uniquement sur vos systèmes** ou avec autorisation écrite
-3. **Ne pas tester en production** (risque de casser le service)
-4. **Respecter les lois** de votre pays
-5. **Sauvegarder vos données** avant les tests
+- JSON : structure complète des résultats — utile pour analyses automatisées.
+- HTML : rendu lisible et interactif (graphes, tables).
+- PDF : export imprimable (généré par le module de reporting si disponible).
 
-### Limitations importantes
-- **Pas un outil professionnel** : Destiné à l'apprentissage
-- **Détection possible** : Certains tests peuvent être loggés
-- **Faux positifs** : Peut signaler des failles qui n'en sont pas
-- **Pas de garantie** : Ne détecte pas toutes les vulnérabilités
+Utilisation : préciser `--format json,html` et `--output` (ou `--outdir`) pour écrire les fichiers.
 
-### Bonnes pratiques
-- Testez d'abord sur des machines virtuelles
-- Utilisez des environnements de développement
-- Documentez toujours vos tests
-- Nettoyez après vos tests (supprimez les fichiers temporaires)
+Si `--output` est un répertoire, un nom par défaut est utilisé (`<commande>_<session_id>.json`).
 
 ---
 
-## Exemples Pratiques et Cas d'Usage
+## Conseils opératoires et sécurité
 
-### Scénario 1 : Tester son site web personnel
-```bash
-# Étape 1 : Reconnaissance
-python main.py recon --target mon-site.com --osint
+- Toujours obtenir une autorisation écrite avant de lancer un test.
+- Préférez des environnements de test (VM, containers) pour l'apprentissage.
+- Evitez `--force` et l'exécution d'exploits sur des systèmes de production.
 
-# Étape 2 : Scan réseau (si vous avez un serveur dédié)
-python main.py network --target 123.45.67.89
+---
 
-# Étape 3 : Scan web complet
-python main.py web --target https://mon-site.com --crawl --scan --depth 3
+## Dépannage rapide
 
-# Étape 4 : Rapport
-python main.py report --session-id <ID_SESSION> --format html
-```
+- "Connection timeout" : vérifier que la cible est joignable, augmenter `scan.timeout` dans la config.
+- "Session not found" lors du `report` : vérifiez que la session a été persistée (ne pas avoir utilisé `--no-persist`).
+- Erreurs d'import de module : assurez-vous d'être dans le dossier du projet et que le venv est activé.
 
-### Scénario 2 : Audit d'un réseau local
-```bash
-# Configuration pour réseau local
-python main.py config --set scan.timeout=1 --set scan.threads=10
+### Aide supplémentaire
 
-# Scan du réseau complet
-python main.py network --target 192.168.1.0/24 --full
+- Pour obtenir l'aide complète d'une commande :
 
-# Test des vulnérabilités web sur les machines trouvées
-python main.py web --target http://192.168.1.100 --scan
-```
-
-### Scénario 3 : Test rapide avant déploiement
-```bash
-# Pipeline automatique rapide
-python main.py all --target https://staging.mon-app.com --quick
-
-# Vérifier les résultats
-python main.py report --session-id <ID_SESSION> --format html
-```
-
-### Scénario 4 : Apprentissage des vulnérabilités
-```bash
-# Tester une application vulnérable intentionnellement (DVWA, etc.)
-python main.py web --target http://localhost:8080 --scan
-
-# Voir les détails des vulnérabilités trouvées
-python main.py report --session-id <ID_SESSION> --format json
+```pwsh
+python main.py <commande> --help
 ```
 
 ---
 
-## Dépannage et FAQ
+## Exemples concrets résumés
 
-### Problèmes courants
+- Pipeline complet (persist et export JSON) :
 
-#### "Erreur de connexion réseau"
-**Symptôme** : Le scan échoue avec "Connection timeout"
-**Solutions** :
-- Vérifiez que la cible est accessible : `ping example.com`
-- Augmentez le timeout : `python main.py config --set scan.timeout=10`
-- Utilisez `--force` seulement si nécessaire
-
-#### "Timeout lors des scans"
-**Symptôme** : Les scans prennent trop de temps
-**Solutions** :
-- Réduisez le nombre de threads : `--set scan.threads=5`
-- Utilisez le mode fast : `--fast`
-- Scannez moins de ports : `--ports 22,80,443`
-
-#### "Échec de génération de rapport"
-**Symptôme** : Erreur "Session not found"
-**Solutions** :
-- Vérifiez l'ID de session (format : AAAAMMJJTHHMMSSZ)
-- Assurez-vous que la session existe dans `results/pentest.db`
-- Vérifiez les permissions d'écriture dans le dossier `reports/`
-
-#### "Module not found"
-**Symptôme** : Erreur d'importation de module
-**Solutions** :
-- Réinstallez les dépendances : `pip install -r requirements.txt`
-- Vérifiez que vous êtes dans le bon dossier
-- Utilisez un environnement virtuel propre
-
-### FAQ
-
-**Q : Puis-je utiliser ce framework sur des sites web publics ?**
-R : Non, uniquement sur vos propres systèmes ou avec autorisation explicite.
-
-**Q : Les tests sont-ils destructeurs ?**
-R : Certains peuvent l'être. Utilisez toujours `--safe-mode` ou évitez `--force`.
-
-**Q : Comment puis-je contribuer ?**
-R : Ouvrez des issues sur GitHub ou proposez des améliorations pédagogiques.
-
-**Q : Le framework détecte-t-il toutes les vulnérabilités ?**
-R : Non, c'est un outil d'apprentissage. Pour des audits professionnels, utilisez des outils spécialisés.
-
-**Q : Puis-je automatiser les tests ?**
-R : Oui, via l'API Python ou des scripts shell.
-
-### Logs et débogage
-```bash
-# Activer les logs détaillés
-python main.py config --set logging.level=DEBUG
-
-# Consulter les logs
-tail -f pentest.log
-
-# Logs au format JSON pour analyse
-python main.py config --set logging.json_lines=true
+```pwsh
+python main.py all --target http://192.168.11.128 --format json --output results/
 ```
 
-### Tests unitaires
-```bash
-# Vérifier que tout fonctionne
-pytest -v
+- Scan web seul (crawl + scan, écriture dans fichier JSON, pas de persistance) :
 
-# Tests spécifiques
-pytest tests/test_web_scanner.py -v
+```pwsh
+python main.py web --target http://192.168.11.128 --crawl --scan --depth 3 --format json --output results/web_scan.json --no-persist
+```
+
+- Générer un rapport PDF pour la session `20251030T144234Z` :
+
+```pwsh
+python main.py report --session-id 20251030T144234Z --format pdf --outdir reports
 ```
 
 ---
 
-## Ressources Supplémentaires
+## Ressources et où contribuer
 
-- **Documentation API** : `API REFERENCE.md`
-- **Guide d'installation** : `INSTALLATION.md`
-- **README** : Présentation générale du projet
-- **Tests unitaires** : Dans le dossier `tests/`
+- Fichiers importants : `main.py`, `core/database.py`, `reporting/report_generator.py`, `config.example.json`.
+- Tests : dossier `tests/` (exécuter `pytest -v`).
+- Propositions d'amélioration : ouvrez une issue ou un PR sur le dépôt GitHub.
 
 ---
 
-*Ce guide est conçu pour être évolutif. N'hésitez pas à suggérer des améliorations pour rendre l'apprentissage plus efficace !*
-
-*Usage strictement éducatif - Toute utilisation malveillante est interdite par la loi.*
+*Ce guide est fourni en français et vise à refléter les dernières améliorations du framework (interface interactive, options de sortie, persistance contrôlable).* 
