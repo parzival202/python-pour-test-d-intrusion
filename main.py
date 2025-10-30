@@ -196,6 +196,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_recon.add_argument("--output", help="Fichier ou répertoire de sortie pour les résultats (JSON)")
     p_recon.add_argument("--format", default="json", help="Format(s) de sortie, csv séparés (json,pdf)")
     p_recon.add_argument("--force", action="store_true")
+    # allow placement of global flags after subcommand (user-friendly)
+    p_recon.add_argument('--no-persist', action='store_true', help="Do not persist results to the database for this run")
 
     p_net = sub.add_parser("network", help="Scan réseau")
     p_net.add_argument("--target", required=True)
@@ -205,6 +207,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_net.add_argument("--output", help="Fichier ou répertoire de sortie pour les résultats (JSON)")
     p_net.add_argument("--format", default="json", help="Format(s) de sortie, comma-separated (json,pdf)")
     p_net.add_argument("--force", action="store_true")
+    p_net.add_argument('--no-persist', action='store_true', help="Do not persist results to the database for this run")
 
     p_web = sub.add_parser("web", help="Crawling et scan web")
     p_web.add_argument("--target", required=True)
@@ -214,6 +217,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_web.add_argument("--output", help="Fichier ou répertoire de sortie pour les résultats (JSON)")
     p_web.add_argument("--format", default="json", help="Format(s) de sortie, comma-separated (json,pdf)")
     p_web.add_argument("--force", action="store_true")
+    p_web.add_argument('--no-persist', action='store_true', help="Do not persist results to the database for this run")
 
     p_exp = sub.add_parser("exploit", help="Exécuter un module d'exploitation (simulé)")
     p_exp.add_argument("--target", required=True)
@@ -221,15 +225,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_exp.add_argument("--output", help="Fichier ou répertoire de sortie pour les résultats (JSON)")
     p_exp.add_argument("--format", default="json", help="Format(s) de sortie, comma-separated (json,pdf)")
     p_exp.add_argument("--force", action="store_true")
+    p_exp.add_argument('--no-persist', action='store_true', help="Do not persist results to the database for this run")
 
     p_rep = sub.add_parser("report", help="Générer un rapport")
     p_rep.add_argument("--session-id", required=True)
     p_rep.add_argument("--format", default="html", help="Comma-separated formats (html,json,pdf)")
     p_rep.add_argument("--outdir", default="reports")
+    p_rep.add_argument('--no-persist', action='store_true', help="Do not persist results to the database for this run")
 
     p_cfg = sub.add_parser("config", help="Afficher ou définir la configuration")
     p_cfg.add_argument("--show", action="store_true")
     p_cfg.add_argument("--set", nargs="*", help="Set key=value pairs", default=[])
+    p_cfg.add_argument('--no-persist', action='store_true', help="Do not persist results to the database for this run")
 
     p_all = sub.add_parser("all", help="Exécuter le pipeline complet")
     p_all.add_argument("--target", required=True)
@@ -237,6 +244,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_all.add_argument("--output", help="Répertoire de sortie pour les résultats agrégés")
     p_all.add_argument("--format", default="json", help="Format(s) de sortie pour 'all' (json,pdf)")
     p_all.add_argument("--force", action="store_true")
+    p_all.add_argument('--no-persist', action='store_true', help="Do not persist results to the database for this run")
 
     return parser
 
