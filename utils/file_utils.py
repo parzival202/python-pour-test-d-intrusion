@@ -1,7 +1,3 @@
-"""
-utils/file_utils.py
-Helpers to save/load JSON with basic safety.
-"""
 import json
 from pathlib import Path
 from datetime import datetime
@@ -20,12 +16,8 @@ def load_json(path: str):
         return None
     return json.loads(p.read_text(encoding='utf-8'))
 
-def make_run_dir(base: str = "results") -> str:
-    """Créer un répertoire d'exécution horodaté sous `base` et retourner son chemin.
-
-    Ex: results/run_20251030T091000Z
-    """
+def make_run_dir(base_dir: str = "results", prefix: str = "run"):
     ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-    p = Path(base) / f"run_{ts}"
-    p.mkdir(parents=True, exist_ok=True)
-    return str(p.resolve())
+    run_dir = Path(base_dir) / f"{prefix}_{ts}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    return str(run_dir.resolve())

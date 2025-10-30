@@ -162,43 +162,6 @@ class ReportGenerator:
         return str(pdf_path)
 
 def _load_json(path):
-    """Charger un fichier JSON à partir du chemin donné."""
-    try:
-        return json.loads(Path(path).read_text(encoding='utf-8'))
-    except Exception:
-        return None
-
-def _format_table(rows, headers):
-    """Formater une liste de lignes en tableau HTML."""
-    th = "".join(f"<th>{html.escape(h)}</th>" for h in headers)
-    trs = []
-    for row in rows:
-        tds = "".join(f"<td>{html.escape(str(row.get(h,'')))}</td>" for h in headers)
-        trs.append(f"<tr>{tds}</tr>")
-    return f"<table border='1' cellpadding='6' style='border-collapse:collapse'><thead><tr>{th}</tr></thead><tbody>{''.join(trs)}</tbody></table>"
-
-def _summary_from_network(net):
-    """Extraire un résumé des données réseau."""
-    if not net:
-        return {"hosts_count": 0, "hosts": []}
-    hosts = net.get("hosts_alive", []) or []
-    hosts_info = net.get("hosts_info", {}) or {}
-    hosts_summary = []
-    for h in hosts:
-        ports = hosts_info.get(h, {}).get("ports", {})
-        open_ports = [str(p) for p, v in (ports.items() if isinstance(ports, dict) else []) if v]
-        hosts_summary.append({"host": h, "open_ports": ", ".join(open_ports)})
-    return {"hosts_count": len(hosts), "hosts": hosts_summary, "meta": net.get("meta", {})}
-
-def _summary_from_web(web):
-    """Extraire un résumé des données web."""
-    if not web:
-        return {"pages_scanned": 0, "forms_found": 0, "pages": []}
-    pages = web.get("pages_scanned", 0)
-    forms = web.get("forms_found", 0)
-    return {"pages_scanned": pages, "forms_found": forms, "meta": web.get("duration_s", None)}
-
-def _load_json(path):
     try:
         return json.loads(Path(path).read_text(encoding='utf-8'))
     except Exception:

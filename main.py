@@ -22,18 +22,20 @@ import sys
 from datetime import datetime
 from typing import Any, List, Optional
 from datetime import datetime, timezone
-from utils.file_utils import make_run_dir
+from utils.file_utils import make_run_dir, save_json
+from core.logger import get_logger
 
 PACKAGE_PREFIX = "penetration_testing_framework"
 
 # Importer les fonctions de base de données
 try:
-    from core.database import create_session, close_session, ensure_schema
+    from core.database import create_session, close_session, ensure_schema, persist_result
 except ImportError:
     # Solution de secours si non disponible
     def create_session(*args, **kwargs): return None
     def close_session(*args, **kwargs): pass
     def ensure_schema(): pass
+    persist_result = None
 
 def try_import(module_path: str):
     """Essaie d'importer un module à partir du chemin donné."""
@@ -111,18 +113,26 @@ def run_network(args: argparse.Namespace, cfg: dict):
         "modules.network.scanner",
         "modules.network"
     ]
-    return dispatch(candidates, target=args.target, scan_type=scan_type, ports=ports, safe_mode=not args.force)
+    results = dispatch(candidates, target=args.target, scan_type=scan_type, ports=ports, safe_mode=not args.force)
+    if args.output and results:
+        save_json(args.output, results)
+    return results
 
 def run_web(args: argparse.Namespace, cfg: dict):
     """Exécute les modules de crawling et de scan web si demandé."""
+    results = {}
     # call crawler then scanner if requested
     if args.crawl:
-        dispatch([f"{PACKAGE_PREFIX}.modules.web.crawler", "modules.web.crawler"],
-                 target=args.target, depth=args.depth, safe_mode=not args.force)
+        crawl_res = dispatch([f"{PACKAGE_PREFIX}.modules.web.crawler", "modules.web.crawler"],
+                             target=args.target, depth=args.depth, safe_mode=not args.force)
+        results['crawl'] = crawl_res
     if args.scan:
-        dispatch([f"{PACKAGE_PREFIX}.modules.web.scanner", "modules.web.scanner"],
-                 target=args.target, safe_mode=not args.force)
-    return True
+        scan_res = dispatch([f"{PACKAGE_PREFIX}.modules.web.scanner", "modules.web.scanner"],
+                            target=args.target, safe_mode=not args.force)
+        results['scan'] = scan_res
+    if args.output and results:
+        save_json(args.output, results)
+    return results if results else True
 
 def run_exploit(args: argparse.Namespace, cfg: dict):
     """Exécute le module d'exploitation spécifié."""
@@ -175,6 +185,8 @@ def run_config(args: argparse.Namespace, cfg: dict):
 def build_parser() -> argparse.ArgumentParser:
     """Construit l'analyseur d'arguments pour l'interface en ligne de commande."""
     parser = argparse.ArgumentParser(prog="ptf", description="Penetration Testing Framework - CLI")
+    # Global opt-out for persisting results into the DB
+    parser.add_argument('--no-persist', action='store_true', help="Do not persist results to the database for this run")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_recon = sub.add_parser("recon", help="Modules de reconnaissance")
@@ -467,7 +479,10 @@ def run(argv: Optional[List[str]] = None):
     ensure_schema()
 
     # Set up RUN_DIR for logging
-    os.environ["RUN_DIR"] = make_run_dir()
+    run_dir = make_run_dir()
+    os.environ["RUN_DIR"] = run_dir
+    logger = get_logger()
+    logger.info(f"Starting session {cfg['session_id']} in {run_dir}")
 
     # Créer une session dans la base de données pour cette exécution
     session_id = cfg["session_id"]
@@ -508,6 +523,27 @@ def run(argv: Optional[List[str]] = None):
 
     # Imprimer les résultats s'il y en a
     if results is not None:
+        # Persist results into DB when possible (skip if user requested --no-persist)
+        logger_local = globals().get('logger') if 'logger' in globals() else None
+        if not getattr(args, 'no_persist', False):
+            if 'persist_result' in globals() and persist_result and session_id and results:
+                try:
+                    persisted = persist_result(session_id, results)
+                    if persisted:
+                        if logger_local:
+                            logger_local.info(f"[*] Persisted results summary: {persisted}")
+                        else:
+                            print(f"[*] Persisted results summary: {persisted}")
+                except Exception as e:
+                    if logger_local:
+                        logger_local.exception("Failed to persist results")
+                    else:
+                        print(f"[!] Failed to persist results: {e}")
+        else:
+            if logger_local:
+                logger_local.info("Persistence skipped ( --no-persist )")
+            else:
+                print("[i] Persistence skipped ( --no-persist )")
         # Enregistrer les résultats selon les options --format/--output si présentes
         # formats peut être spécifié sur chaque sous-commande
         formats = []

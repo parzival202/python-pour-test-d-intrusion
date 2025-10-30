@@ -283,3 +283,67 @@ def cleanup_old_sessions(days: int = 30):
 def get_session_results(session_id: str) -> Dict:
     """Obtenir les résultats complets de la session sous forme de dictionnaire."""
     return get_session_summary(session_id)
+
+
+def persist_result(session_id: str, result: Dict) -> Dict:
+    """Persist un dictionnaire de résultats de module dans la base.
+
+    Comportement heuristique :
+    - si le dict contient une clé 'scan_type' ou 'scan' => crée un enregistrement dans `scans`
+    - si le dict contient 'vulnerabilities' (liste) => insère chaque vuln via add_vulnerability
+    - si le dict contient 'exploitations' ou 'exploits' (liste) => insère via add_exploitation
+    - si le dict ressemble à une vulnérabilité unique (presence de 'type' et 'severity') => l'insère
+    Retourne un résumé des ids insérés.
+    """
+    ensure_schema()
+    summary = {"scans": [], "vulnerabilities": [], "exploitations": []}
+    try:
+        # Track the most recently created scan id(s). If multiple scans are created, keep the last one as a sensible default
+        last_scan_id = None
+
+        # Single scan object (top-level)
+        if isinstance(result, dict) and (result.get('scan_type') or result.get('scan')):
+            scan_type = result.get('scan_type') or (result.get('scan') and result.get('scan').get('type')) or 'unknown'
+            target = result.get('target') or result.get('scan', {}).get('target', '')
+            results_blob = result.get('results') or result.get('scan') or result
+            scan_id = add_scan(session_id, scan_type, target, results_blob)
+            last_scan_id = scan_id
+            summary['scans'].append(scan_id)
+
+        # Top-level list of scans
+        if isinstance(result, dict) and isinstance(result.get('scans'), list):
+            for s in result.get('scans'):
+                stype = s.get('scan_type') or s.get('type', 'unknown')
+                target = s.get('target', '')
+                sid = add_scan(session_id, stype, target, s.get('results') or s)
+                last_scan_id = sid
+                summary['scans'].append(sid)
+
+        # Vulnerabilities list
+        if isinstance(result, dict) and isinstance(result.get('vulnerabilities'), list):
+            for v in result.get('vulnerabilities'):
+                vid = add_vulnerability(session_id, v, last_scan_id)
+                summary['vulnerabilities'].append(vid)
+
+        # Single vulnerability dict (only insert if not part of vulnerabilities list)
+        if isinstance(result, dict) and result.get('type') and result.get('severity') and not isinstance(result.get('vulnerabilities'), list):
+            vid = add_vulnerability(session_id, result, last_scan_id)
+            summary['vulnerabilities'].append(vid)
+
+        # Exploitations list
+        if isinstance(result, dict) and isinstance(result.get('exploitations'), list):
+            for e in result.get('exploitations'):
+                vuln_ref = e.get('vuln_id') or (e.get('vuln') and e.get('vuln').get('id'))
+                exid = add_exploitation(session_id, vuln_ref, e)
+                summary['exploitations'].append(exid)
+
+        # Single exploitation dict
+        if isinstance(result, dict) and (result.get('success') is not None) and result.get('type') and not isinstance(result.get('exploitations'), list):
+            vuln_ref = result.get('vuln_id') or (result.get('vuln') and result.get('vuln').get('id'))
+            exid = add_exploitation(session_id, vuln_ref, result)
+            summary['exploitations'].append(exid)
+
+    except Exception:
+        # Ne pas rater la persistance globale si une insertion échoue; remonter l'exception
+        raise
+    return summary
