@@ -39,3 +39,7 @@ python-dotenv>=1.0
 
 # Barre de progression pour les tâches longues (optionnel mais utile)
 tqdm>=4.65
+
+
+dnspython
+reportlab
