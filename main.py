@@ -514,11 +514,28 @@ def run(argv: Optional[List[str]] = None):
     elif args.command == "all":
         # orchestration conservatrice du pipeline
         print("🚀 Starting full penetration test pipeline...")
-        a = argparse.Namespace(target=args.target, force=args.force, crawl=True, scan=True, depth=2)
+        # build a conservative namespace covering fields expected by individual subcommands
+        a = argparse.Namespace(
+            target=args.target,
+            force=getattr(args, 'force', False),
+            # recon
+            osint=False,
+            # network
+            ports=None,
+            full=False,
+            fast=False,
+            output=None,
+            format=getattr(args, 'format', 'json'),
+            # web
+            crawl=True,
+            scan=True,
+            depth=2
+        )
+
         recon_results = run_recon(a, cfg)
         network_results = run_network(a, cfg)
         web_results = run_web(a, cfg)
-        exploit_results = run_exploit(argparse.Namespace(target=args.target, module=None, force=args.force), cfg)
+        exploit_results = run_exploit(argparse.Namespace(target=args.target, module=None, force=getattr(args, 'force', False)), cfg)
         report_results = run_report(argparse.Namespace(session_id=cfg["session_id"], format="html,json", outdir="reports"), cfg)
 
         results = {
