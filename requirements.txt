@@ -43,3 +43,4 @@ tqdm>=4.65
 
 dnspython
 reportlab
+pysqlite
