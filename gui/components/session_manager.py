@@ -20,7 +20,7 @@ except ImportError:
     sys.exit(1)
 
 from core.config import Config
-from core.database import create_session, get_session, close_session, get_connection
+from core.database import create_session, get_session, close_session, list_sessions
 
 
 class SessionManager(QWidget):
@@ -77,14 +77,11 @@ class SessionManager(QWidget):
         self.session_list.clear()
 
         try:
-            conn = get_connection()
-            c = conn.cursor()
-            c.execute("SELECT session_id, target, status FROM sessions ORDER BY start_time DESC")
-            rows = c.fetchall()
-            conn.close()
-
+            rows = list_sessions()
             for row in rows:
-                session_id, target, status = row
+                session_id = row.get('session_id')
+                target = row.get('target')
+                status = row.get('status')
                 item_text = f"{session_id} - {target} ({status})"
                 item = QListWidgetItem(item_text)
                 item.setData(Qt.UserRole, session_id)

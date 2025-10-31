@@ -52,7 +52,7 @@ L'invite interactive affiche une liste d'exemples et accepte des lignes de comma
 
 Syntaxe générale : `python main.py <commande> [--target <cible>] [--format json,html,pdf] [--output <path>] [--no-persist]`
 
-- `--no-persist` : ne pas écrire les résultats dans la base SQLite (`results/pentest.db`).
+- `--no-persist` : ne pas écrire les résultats dans la base locale (fichier JSON `results/pentest_db.json`).
 - `--format` : formats d'export (ex : `--format json,pdf`).
 - `--output` ou `--outdir` : chemin pour écrire les fichiers de sortie.
 
@@ -124,7 +124,7 @@ L'invite accepte `help`, `commands`, `exit` et exécute la ligne fournie.
 
 ## Où sont enregistrés les résultats ?
 
-- Base de données SQLite : `results/pentest.db` — contient les tables `sessions`, `scans`, `vulnerabilities`, `exploitations`.
+- Base de données locale (JSON) : `results/pentest_db.json` — contient les listes `sessions`, `scans`, `vulnerabilities`, `exploitations` et des compteurs d'ID.
 - Rapports et exports : dossier `reports/` et/ou le chemin indiqué via `--output` / `--outdir`.
 - Dossiers de run : lors d'une exécution une variable `RUN_DIR` est créée (ex : `runs/run_<timestamp>`) et contient logs et fichiers temporaires.
 
@@ -139,8 +139,13 @@ Exemple pour lister rapidement (dans PowerShell) :
 # Afficher la liste des fichiers de report
 ls reports\
 
-# Inspecter rapidement la DB (si sqlite3 est installé)
-sqlite3 results/pentest.db "SELECT session_id, status, start_time FROM sessions ORDER BY start_time DESC LIMIT 10;"
+# Inspecter rapidement la DB (format JSON)
+
+Vous pouvez afficher directement le fichier JSON ou utiliser le script d'audit fourni qui lit le fichier et affiche un résumé :
+
+```pwsh
+python .\tools\audit_db_check.py
+```
 ```
 
 ---

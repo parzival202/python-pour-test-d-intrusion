@@ -1,0 +1,56 @@
+{
+  "target": "http://192.168.111.128",
+  "timestamp": "20251031T132237Z",
+  "network": {
+    "target": "192.168.111.128",
+    "hosts_alive": [
+      "192.168.111.128"
+    ],
+    "hosts_info": {
+      "192.168.111.128": {
+        "ports": {
+          "80": true,
+          "25": false,
+          "110": false,
+          "53": false,
+          "22": false,
+          "443": false,
+          "143": false,
+          "21": false,
+          "23": false,
+          "139": false,
+          "445": false,
+          "3389": false,
+          "3306": false
+        }
+      }
+    },
+    "nmap_raw": {},
+    "meta": {
+      "duration_s": 3.04,
+      "threads": 10,
+      "timeout": 1.5
+    }
+  },
+  "web": {
+    "url": "http://192.168.111.128",
+    "xss": {
+      "url": "http://192.168.111.128",
+      "payloads_tested": 18,
+      "reflected": false,
+      "evidence": []
+    },
+    "sqli": {
+      "url": "http://192.168.111.128",
+      "payloads_tested": 6,
+      "likely_sqli": false,
+      "evidence": []
+    },
+    "lfi": {
+      "url": "http://192.168.111.128",
+      "payloads_tested": 6,
+      "likely_lfi": false,
+      "evidence": []
+    }
+  }
+}

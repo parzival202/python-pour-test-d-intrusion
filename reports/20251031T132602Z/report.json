@@ -1,0 +1,16 @@
+{
+  "session": {
+    "id": 9,
+    "session_id": "20251031T132602Z",
+    "target": "192.168.111.128",
+    "config": {
+      "session_id": "20251031T132602Z"
+    },
+    "start_time": "2025-10-31T13:26:02.880053+00:00",
+    "end_time": null,
+    "status": "running"
+  },
+  "scans": [],
+  "vulnerabilities": [],
+  "exploitations": []
+}

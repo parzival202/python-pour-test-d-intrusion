@@ -1,255 +1,177 @@
 """
 core/database.py
-Assistant SQLite pour la base de données stockant les sessions de pentest, scans, vulnérabilités et exploitations.
-Fournit des opérations CRUD pour toutes les entités.
+Implementation légère de la persistance en utilisant uniquement la stdlib (JSON file)
+Remplace sqlite par un fichier JSON pour éviter les problèmes d'environnement.
+
+Le fichier est `results/pentest_db.json` et contient les listes : sessions, scans,
+vulnerabilities, exploitations et des compteurs d'IDs.
+
+L'API reste la même (fonctions CRUD) pour limiter les changements côté appelant.
 """
-import sqlite3
 import json
 from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime, timezone, timedelta
 
-# Chemin de la base de données selon les exigences TODO
+# Fichier de base de données (JSON)
 DB_DIR = Path("./results")
-DB_PATH = DB_DIR / "pentest.db"
+DB_FILE = DB_DIR / "pentest_db.json"
 
-def get_connection():
-    """Obtenir une connexion à la base de données avec la configuration appropriée."""
+
+def _ensure_db_file():
     DB_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if not DB_FILE.exists():
+        initial = {
+            "next_ids": {"session": 1, "scan": 1, "vuln": 1, "exploit": 1},
+            "sessions": [],
+            "scans": [],
+            "vulnerabilities": [],
+            "exploitations": []
+        }
+        DB_FILE.write_text(json.dumps(initial, indent=2, default=str), encoding='utf-8')
+
+
+def _load_db() -> Dict:
+    _ensure_db_file()
+    try:
+        return json.loads(DB_FILE.read_text(encoding='utf-8'))
+    except Exception:
+        # Recreate if corrupted
+        _ensure_db_file()
+        return json.loads(DB_FILE.read_text(encoding='utf-8'))
+
+
+def _save_db(data: Dict):
+    tmp = DB_FILE.with_suffix('.tmp')
+    tmp.write_text(json.dumps(data, indent=2, default=str), encoding='utf-8')
+    tmp.replace(DB_FILE)
+
 
 def ensure_schema():
-    """Créer toutes les tables nécessaires si elles n'existent pas."""
-    conn = get_connection()
-    c = conn.cursor()
-
-    # Table des sessions
-    c.execute("""CREATE TABLE IF NOT EXISTS sessions (
-                   id INTEGER PRIMARY KEY AUTOINCREMENT,
-                   session_id TEXT UNIQUE,
-                   target TEXT,
-                   config_json TEXT,
-                   start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                   end_time DATETIME,
-                   status TEXT DEFAULT 'running'
-                 )""")
-
-    # Table des scans
-    c.execute("""CREATE TABLE IF NOT EXISTS scans (
-                   id INTEGER PRIMARY KEY AUTOINCREMENT,
-                   session_id TEXT,
-                   scan_type TEXT,
-                   target TEXT,
-                   results_json TEXT,
-                   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                   FOREIGN KEY (session_id) REFERENCES sessions (session_id)
-                 )""")
-
-    # Table des vulnérabilités
-    c.execute("""CREATE TABLE IF NOT EXISTS vulnerabilities (
-                   id INTEGER PRIMARY KEY AUTOINCREMENT,
-                   session_id TEXT,
-                   scan_id INTEGER,
-                   vuln_type TEXT,
-                   severity TEXT,
-                   target TEXT,
-                   description TEXT,
-                   details_json TEXT,
-                   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                   FOREIGN KEY (session_id) REFERENCES sessions (session_id),
-                   FOREIGN KEY (scan_id) REFERENCES scans (id)
-                 )""")
-
-    # Table des exploitations
-    c.execute("""CREATE TABLE IF NOT EXISTS exploitations (
-                   id INTEGER PRIMARY KEY AUTOINCREMENT,
-                   session_id TEXT,
-                   vuln_id INTEGER,
-                   exploit_type TEXT,
-                   success BOOLEAN,
-                   command TEXT,
-                   output TEXT,
-                   details_json TEXT,
-                   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                   FOREIGN KEY (session_id) REFERENCES sessions (session_id),
-                   FOREIGN KEY (vuln_id) REFERENCES vulnerabilities (id)
-                 )""")
-
-    conn.commit()
-    conn.close()
+    """S'assure que le fichier DB existe et possède les clefs de base."""
+    _ensure_db_file()
 
 # CRUD des sessions
 def create_session(session_id: str, target: str, config: Optional[Dict] = None) -> int:
     """Créer une nouvelle session. Retourne l'ID de session DB."""
-    conn = get_connection()
-    c = conn.cursor()
-    try:
-        c.execute("INSERT INTO sessions (session_id, target, config_json) VALUES (?, ?, ?)",
-                  (session_id, target, json.dumps(config or {}, ensure_ascii=False)))
-        session_db_id = c.lastrowid
-        conn.commit()
-        return session_db_id
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
+    db = _load_db()
+    sid = db['next_ids']['session']
+    db['next_ids']['session'] += 1
+    now = datetime.now(timezone.utc).isoformat()
+    db['sessions'].append({
+        'id': sid,
+        'session_id': session_id,
+        'target': target,
+        'config': config or {},
+        'start_time': now,
+        'end_time': None,
+        'status': 'running'
+    })
+    _save_db(db)
+    return sid
 
 def close_session(session_id: str, status: str = 'finished'):
     """Fermer la session avec le statut."""
-    conn = get_connection()
-    c = conn.cursor()
-    try:
-        # store timezone-aware UTC timestamp in same format as SQLite CURRENT_TIMESTAMP
-        end_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
-        c.execute("UPDATE sessions SET status = ?, end_time = ? WHERE session_id = ?",
-                  (status, end_time, session_id))
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
+    db = _load_db()
+    now = datetime.now(timezone.utc).isoformat()
+    changed = False
+    for s in db.get('sessions', []):
+        if s.get('session_id') == session_id:
+            s['status'] = status
+            s['end_time'] = now
+            changed = True
+            break
+    if changed:
+        _save_db(db)
 
 def get_session(session_id: str) -> Optional[Dict]:
     """Obtenir les détails de la session."""
-    conn = get_connection()
-    c = conn.cursor()
-    try:
-        c.execute("SELECT * FROM sessions WHERE session_id = ?", (session_id,))
-        row = c.fetchone()
-        if row:
-            return {
-                "id": row[0],
-                "session_id": row[1],
-                "target": row[2],
-                "config": json.loads(row[3]) if row[3] else {},
-                "start_time": row[4],
-                "end_time": row[5],
-                "status": row[6]
-            }
-        return None
-    finally:
-        conn.close()
+    db = _load_db()
+    for s in db.get('sessions', []):
+        if s.get('session_id') == session_id:
+            return s
+    return None
 
 # CRUD des scans
 def add_scan(session_id: str, scan_type: str, target: str, results: Dict) -> int:
     """Ajouter les résultats du scan et retourner scan_id."""
-    conn = get_connection()
-    c = conn.cursor()
-    try:
-        c.execute("INSERT INTO scans (session_id, scan_type, target, results_json) VALUES (?, ?, ?, ?)",
-                  (session_id, scan_type, target, json.dumps(results, ensure_ascii=False)))
-        scan_id = c.lastrowid
-        conn.commit()
-        return scan_id
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
+    db = _load_db()
+    sid = db['next_ids']['scan']
+    db['next_ids']['scan'] += 1
+    now = datetime.now(timezone.utc).isoformat()
+    db['scans'].append({
+        'id': sid,
+        'session_id': session_id,
+        'scan_type': scan_type,
+        'target': target,
+        'results': results,
+        'created_at': now
+    })
+    _save_db(db)
+    return sid
 
 def get_scans_by_session(session_id: str) -> List[Dict]:
     """Obtenir tous les scans pour une session."""
-    conn = get_connection()
-    c = conn.cursor()
-    try:
-        c.execute("SELECT * FROM scans WHERE session_id = ? ORDER BY created_at", (session_id,))
-        rows = c.fetchall()
-        return [{
-            "id": row[0],
-            "session_id": row[1],
-            "scan_type": row[2],
-            "target": row[3],
-            "results": json.loads(row[4]) if row[4] else {},
-            "created_at": row[5]
-        } for row in rows]
-    finally:
-        conn.close()
+    db = _load_db()
+    scans = [s for s in db.get('scans', []) if s.get('session_id') == session_id]
+    scans.sort(key=lambda x: x.get('created_at'))
+    return scans
 
 # CRUD des vulnérabilités
 def add_vulnerability(session_id: str, vuln_dict: Dict, scan_id: Optional[int] = None) -> int:
     """Ajouter une découverte de vulnérabilité et retourner vuln_id."""
-    conn = get_connection()
-    c = conn.cursor()
-    try:
-        c.execute("""INSERT INTO vulnerabilities (session_id, scan_id, vuln_type, severity, target, description, details_json)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                  (session_id, scan_id, vuln_dict.get('type', 'unknown'),
-                   vuln_dict.get('severity', 'medium'), vuln_dict.get('target', ''),
-                   vuln_dict.get('description', ''), json.dumps(vuln_dict, ensure_ascii=False)))
-        vuln_id = c.lastrowid
-        conn.commit()
-        return vuln_id
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
+    db = _load_db()
+    vid = db['next_ids']['vuln']
+    db['next_ids']['vuln'] += 1
+    now = datetime.now(timezone.utc).isoformat()
+    db['vulnerabilities'].append({
+        'id': vid,
+        'session_id': session_id,
+        'scan_id': scan_id,
+        'vuln_type': vuln_dict.get('type', 'unknown'),
+        'severity': vuln_dict.get('severity', 'medium'),
+        'target': vuln_dict.get('target', ''),
+        'description': vuln_dict.get('description', ''),
+        'details': vuln_dict,
+        'created_at': now
+    })
+    _save_db(db)
+    return vid
 
 def get_vulnerabilities_by_session(session_id: str) -> List[Dict]:
     """Obtenir toutes les vulnérabilités pour une session."""
-    conn = get_connection()
-    c = conn.cursor()
-    try:
-        c.execute("SELECT * FROM vulnerabilities WHERE session_id = ? ORDER BY created_at", (session_id,))
-        rows = c.fetchall()
-        return [{
-            "id": row[0],
-            "session_id": row[1],
-            "scan_id": row[2],
-            "vuln_type": row[3],
-            "severity": row[4],
-            "target": row[5],
-            "description": row[6],
-            "details": json.loads(row[7]) if row[7] else {},
-            "created_at": row[8]
-        } for row in rows]
-    finally:
-        conn.close()
+    db = _load_db()
+    vulns = [v for v in db.get('vulnerabilities', []) if v.get('session_id') == session_id]
+    vulns.sort(key=lambda x: x.get('created_at'))
+    return vulns
 
 # CRUD des exploitations
 def add_exploitation(session_id: str, vuln_id: int, exploit_dict: Dict) -> int:
     """Ajouter une tentative d'exploitation et retourner exploit_id."""
-    conn = get_connection()
-    c = conn.cursor()
-    try:
-        c.execute("""INSERT INTO exploitations (session_id, vuln_id, exploit_type, success, command, output, details_json)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                  (session_id, vuln_id, exploit_dict.get('type', 'unknown'),
-                   exploit_dict.get('success', False), exploit_dict.get('command', ''),
-                   exploit_dict.get('output', ''), json.dumps(exploit_dict, ensure_ascii=False)))
-        exploit_id = c.lastrowid
-        conn.commit()
-        return exploit_id
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
+    db = _load_db()
+    eid = db['next_ids']['exploit']
+    db['next_ids']['exploit'] += 1
+    now = datetime.now(timezone.utc).isoformat()
+    db['exploitations'].append({
+        'id': eid,
+        'session_id': session_id,
+        'vuln_id': vuln_id,
+        'exploit_type': exploit_dict.get('type', 'unknown'),
+        'success': bool(exploit_dict.get('success', False)),
+        'command': exploit_dict.get('command', ''),
+        'output': exploit_dict.get('output', ''),
+        'details': exploit_dict,
+        'created_at': now
+    })
+    _save_db(db)
+    return eid
 
 def get_exploitations_by_session(session_id: str) -> List[Dict]:
     """Obtenir toutes les exploitations pour une session."""
-    conn = get_connection()
-    c = conn.cursor()
-    try:
-        c.execute("SELECT * FROM exploitations WHERE session_id = ? ORDER BY created_at", (session_id,))
-        rows = c.fetchall()
-        return [{
-            "id": row[0],
-            "session_id": row[1],
-            "vuln_id": row[2],
-            "exploit_type": row[3],
-            "success": bool(row[4]),
-            "command": row[5],
-            "output": row[6],
-            "details": json.loads(row[7]) if row[7] else {},
-            "created_at": row[8]
-        } for row in rows]
-    finally:
-        conn.close()
+    db = _load_db()
+    exs = [e for e in db.get('exploitations', []) if e.get('session_id') == session_id]
+    exs.sort(key=lambda x: x.get('created_at'))
+    return exs
 
 # Fonctions utilitaires
 def get_session_summary(session_id: str) -> Dict:
@@ -268,23 +190,56 @@ def get_session_summary(session_id: str) -> Dict:
 def cleanup_old_sessions(days: int = 30):
     """Supprimer les sessions plus anciennes que le nombre de jours spécifié."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-    cutoff_str = cutoff.strftime('%Y-%m-%d %H:%M:%S')
-    conn = get_connection()
-    c = conn.cursor()
-    try:
-        c.execute("DELETE FROM sessions WHERE start_time < ?", (cutoff_str,))
-        deleted = c.rowcount
-        conn.commit()
-        return deleted
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
+    cutoff_iso = cutoff.isoformat()
+    db = _load_db()
+    original_count = len(db.get('sessions', []))
+    # Keep sessions with start_time >= cutoff
+    kept = []
+    removed_session_ids = set()
+    for s in db.get('sessions', []):
+        st = s.get('start_time')
+        if not st or st >= cutoff_iso:
+            kept.append(s)
+        else:
+            removed_session_ids.add(s.get('session_id'))
+
+    db['sessions'] = kept
+    # Also remove scans/vulns/exploits related to removed sessions
+    db['scans'] = [sc for sc in db.get('scans', []) if sc.get('session_id') not in removed_session_ids]
+    db['vulnerabilities'] = [v for v in db.get('vulnerabilities', []) if v.get('session_id') not in removed_session_ids]
+    db['exploitations'] = [e for e in db.get('exploitations', []) if e.get('session_id') not in removed_session_ids]
+
+    _save_db(db)
+    deleted = original_count - len(db.get('sessions', []))
+    return deleted
 
 def get_session_results(session_id: str) -> Dict:
     """Obtenir les résultats complets de la session sous forme de dictionnaire."""
     return get_session_summary(session_id)
+
+
+def list_sessions(limit: Optional[int] = None) -> List[Dict]:
+    """Retourne la liste des sessions triées par start_time desc.
+
+    limit: si fourni, limite le nombre de sessions retournées.
+    """
+    db = _load_db()
+    sess = list(db.get('sessions', []))
+    sess.sort(key=lambda x: x.get('start_time') or '', reverse=True)
+    if limit:
+        return sess[:limit]
+    return sess
+
+
+def get_counts() -> Dict[str, int]:
+    """Retourne un dict avec les comptes de chaque table."""
+    db = _load_db()
+    return {
+        'sessions': len(db.get('sessions', [])),
+        'scans': len(db.get('scans', [])),
+        'vulnerabilities': len(db.get('vulnerabilities', [])),
+        'exploitations': len(db.get('exploitations', []))
+    }
 
 
 def persist_result(session_id: str, result: Dict) -> Dict:

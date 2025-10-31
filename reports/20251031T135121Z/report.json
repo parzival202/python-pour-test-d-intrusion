@@ -1,0 +1,83 @@
+{
+  "session": {
+    "id": 14,
+    "session_id": "20251031T135121Z",
+    "target": "192.168.111.128",
+    "config": {
+      "session_id": "20251031T135121Z"
+    },
+    "start_time": "2025-10-31T13:51:21.427155+00:00",
+    "end_time": null,
+    "status": "running"
+  },
+  "scans": [
+    {
+      "id": 11,
+      "session_id": "20251031T135121Z",
+      "scan_type": "network",
+      "target": "192.168.111.128",
+      "results": {
+        "target": "192.168.111.128",
+        "hosts_alive": [
+          "192.168.111.128"
+        ],
+        "hosts_info": {
+          "192.168.111.128": {
+            "ports": {
+              "80": true,
+              "21": false,
+              "53": false,
+              "23": false,
+              "25": false,
+              "445": false,
+              "443": false,
+              "139": false,
+              "110": false,
+              "3389": false,
+              "22": false,
+              "143": false,
+              "3306": false
+            }
+          }
+        },
+        "nmap_raw": {},
+        "meta": {
+          "duration_s": 2.03,
+          "threads": 20,
+          "timeout": 2.0
+        }
+      },
+      "created_at": "2025-10-31T13:51:24.620176+00:00"
+    },
+    {
+      "id": 12,
+      "session_id": "20251031T135121Z",
+      "scan_type": "web",
+      "target": "192.168.111.128",
+      "results": {
+        "url": "192.168.111.128",
+        "xss": {
+          "url": "192.168.111.128",
+          "payloads_tested": 9,
+          "reflected": false,
+          "evidence": []
+        },
+        "sqli": {
+          "url": "192.168.111.128",
+          "payloads_tested": 3,
+          "likely_sqli": false,
+          "evidence": []
+        },
+        "lfi": {
+          "url": "192.168.111.128",
+          "payloads_tested": 3,
+          "likely_lfi": false,
+          "evidence": []
+        }
+      },
+      "created_at": "2025-10-31T13:51:24.638170+00:00"
+    }
+  ],
+  "vulnerabilities": [],
+  "exploitations": []
+}

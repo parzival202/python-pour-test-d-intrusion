@@ -43,4 +43,4 @@ tqdm>=4.65
 
 dnspython
 reportlab
-pysqlite
+# pysqlite removed: using stdlib JSON file persistence instead of SQLite

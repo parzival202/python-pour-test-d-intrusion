@@ -73,17 +73,53 @@ def load_config(path: Optional[str] = None) -> dict:
 
 def dispatch(module_candidates: List[str], func_name: str = "run", **kwargs) -> Any:
     """Essaie d'importer les modules candidats et appelle func_name(**kwargs) si présent."""
+    # List of fallback function names to try when 'func_name' not present
+    fallbacks = [func_name, 'scan_target', 'scan', 'scan_page', 'discover', 'discover_hosts', 'discover_and_list', 'run_all', 'main']
     for module_path in module_candidates:
         if not module_path:
             continue
         mod = try_import(module_path)
-        if mod and hasattr(mod, func_name):
-            func = getattr(mod, func_name)
-            try:
-                return func(**kwargs)
-            except TypeError:
-                # fallback: pass kwargs dict as single arg
-                return func(kwargs)
+        if not mod:
+            continue
+
+        # try requested func_name first, then fallbacks
+        import inspect
+        for fname in fallbacks:
+            if hasattr(mod, fname):
+                func = getattr(mod, fname)
+                try:
+                    sig = None
+                    try:
+                        sig = inspect.signature(func)
+                    except Exception:
+                        sig = None
+
+                    # If function accepts **kwargs, pass everything; otherwise filter to accepted params
+                    filtered_kwargs = kwargs
+                    if sig is not None:
+                        params = sig.parameters
+                        accepts_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+                        if not accepts_var_kw:
+                            accepted = [p for p in params.keys() if p != 'self']
+                            filtered_kwargs = {k: v for k, v in kwargs.items() if k in accepted}
+                            # common mapping: if caller passed 'target' but function expects 'url' or 'ip' or 'host'
+                            if 'target' in kwargs:
+                                for alias in ('url', 'ip', 'host', 'address'):
+                                    if alias in accepted and alias not in filtered_kwargs:
+                                        filtered_kwargs[alias] = kwargs['target']
+                                        break
+
+                    return func(**filtered_kwargs)
+                except TypeError:
+                    # as a last resort, try calling with single dict arg if signature unknown
+                    try:
+                        return func(kwargs)
+                    except Exception:
+                        # give up on this callable and try the next fallback
+                        break
+                except Exception:
+                    # propagate other exceptions to surface runtime errors from modules
+                    raise
     return None
 
 # ---- gestionnaires de commandes ----
@@ -538,6 +574,20 @@ def run(argv: Optional[List[str]] = None):
         network_results = run_network(a, cfg)
         web_results = run_web(a, cfg)
         exploit_results = run_exploit(argparse.Namespace(target=args.target, module=None, force=getattr(args, 'force', False)), cfg)
+        # Persist intermediate results so report generator can read them
+        try:
+            compact = {"scans": [], "vulnerabilities": [], "exploitations": []}
+            if network_results:
+                compact['scans'].append({'scan_type': 'network', 'target': args.target, 'results': network_results})
+            if web_results and isinstance(web_results, dict) and web_results.get('scan'):
+                compact['scans'].append({'scan_type': 'web', 'target': args.target, 'results': web_results.get('scan')})
+            try:
+                persisted_tmp = persist_result(cfg['session_id'], normalize_for_json(compact)) if persist_result else None
+            except Exception:
+                persisted_tmp = None
+        except Exception:
+            persisted_tmp = None
+
         report_results = run_report(argparse.Namespace(session_id=cfg["session_id"], format="html,json", outdir="reports"), cfg)
 
         results = {
@@ -556,11 +606,38 @@ def run(argv: Optional[List[str]] = None):
         if not getattr(args, 'no_persist', False):
             if 'persist_result' in globals() and persist_result and session_id and results:
                 try:
-                    # Normalize results to a JSON-serializable structure before persisting
+                    # For the 'all' pipeline, build a compact payload expected by persist_result
+                    to_persist = None
+                    if getattr(args, 'command', '') == 'all' or (hasattr(args, 'command') and args.command == 'all'):
+                        to_persist = {"scans": [], "vulnerabilities": [], "exploitations": []}
+                        # network
+                        net = results.get('network') if isinstance(results, dict) else None
+                        if net:
+                            to_persist['scans'].append({
+                                'scan_type': 'network',
+                                'target': args.target,
+                                'results': net
+                            })
+                        # web
+                        web = results.get('web') if isinstance(results, dict) else None
+                        if web and isinstance(web, dict):
+                            # include crawl and scan if present
+                            if web.get('scan'):
+                                to_persist['scans'].append({
+                                    'scan_type': 'web',
+                                    'target': args.target,
+                                    'results': web.get('scan')
+                                })
+                            if web.get('vulnerabilities') and isinstance(web.get('vulnerabilities'), list):
+                                to_persist['vulnerabilities'].extend(web.get('vulnerabilities'))
+                    else:
+                        to_persist = results
+
+                    # Normalize before persisting
                     try:
-                        normalized_results = normalize_for_json(results)
+                        normalized_results = normalize_for_json(to_persist)
                     except Exception:
-                        normalized_results = results
+                        normalized_results = to_persist
 
                     persisted = persist_result(session_id, normalized_results)
                     if persisted:

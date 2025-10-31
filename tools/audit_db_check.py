@@ -15,7 +15,6 @@ if proj_root not in sys.path:
     sys.path.insert(0, proj_root)
 
 from core import database
-from core.database import get_connection
 
 print("[INFO] Starting DB audit check...")
 
@@ -46,46 +45,36 @@ try:
     database.close_session(session_id, status='completed')
     print(f"[INFO] Closed session {session_id}")
 
-    # Now query counts and last rows
-    conn = get_connection()
-    c = conn.cursor()
-    def fetch_count(q):
-        c.execute(q)
-        return c.fetchone()[0]
-
+    # Now query counts and last rows using the JSON DB API
+    counts = database.get_counts()
     print('\n[DB SUMMARY]')
-    print('Sessions:', fetch_count("SELECT COUNT(*) FROM sessions"))
-    print('Scans:', fetch_count("SELECT COUNT(*) FROM scans"))
-    print('Vulnerabilities:', fetch_count("SELECT COUNT(*) FROM vulnerabilities"))
-    print('Exploitations:', fetch_count("SELECT COUNT(*) FROM exploitations"))
+    print('Sessions:', counts.get('sessions'))
+    print('Scans:', counts.get('scans'))
+    print('Vulnerabilities:', counts.get('vulnerabilities'))
+    print('Exploitations:', counts.get('exploitations'))
 
-    def print_rows(cursor):
-        rows = cursor.fetchall()
-        for r in rows:
-            # sqlite3.Row -> convert to tuple for friendly print
-            try:
-                print(tuple(r))
-            except Exception:
-                print(r)
+    db = database._load_db()
 
-    print('\n[RECENT SESSIONS]')
-    c.execute("SELECT session_id, target, status, start_time, end_time FROM sessions ORDER BY start_time DESC LIMIT 5")
-    print_rows(c)
+    def print_items(title, items, fields=None):
+        print(f"\n[{title}]")
+        for it in items:
+            if fields:
+                print(tuple(it.get(f) for f in fields))
+            else:
+                print(it)
 
-    print('\n[RECENT SCANS]')
-    c.execute("SELECT id, session_id, scan_type, target, created_at FROM scans ORDER BY created_at DESC LIMIT 5")
-    print_rows(c)
+    recent_sessions = database.list_sessions(limit=5)
+    print_items('RECENT SESSIONS', recent_sessions, fields=['session_id', 'target', 'status', 'start_time', 'end_time'])
 
-    print('\n[RECENT VULNERABILITIES]')
-    c.execute("SELECT id, session_id, vuln_type, severity, target, created_at FROM vulnerabilities ORDER BY created_at DESC LIMIT 5")
-    print_rows(c)
+    recent_scans = sorted(db.get('scans', []), key=lambda x: x.get('created_at') or '', reverse=True)[:5]
+    print_items('RECENT SCANS', recent_scans, fields=['id', 'session_id', 'scan_type', 'target', 'created_at'])
 
-    print('\n[RECENT EXPLOITATIONS]')
-    # exploitations table schema: id, session_id, vuln_id, exploit_type, success, command, output, details_json, created_at
-    c.execute("SELECT id, session_id, vuln_id, exploit_type, success, command, created_at FROM exploitations ORDER BY created_at DESC LIMIT 5")
-    print_rows(c)
+    recent_vulns = sorted(db.get('vulnerabilities', []), key=lambda x: x.get('created_at') or '', reverse=True)[:5]
+    print_items('RECENT VULNERABILITIES', recent_vulns, fields=['id', 'session_id', 'vuln_type', 'severity', 'target', 'created_at'])
 
-    conn.close()
+    recent_exps = sorted(db.get('exploitations', []), key=lambda x: x.get('created_at') or '', reverse=True)[:5]
+    print_items('RECENT EXPLOITATIONS', recent_exps, fields=['id', 'session_id', 'vuln_id', 'exploit_type', 'success', 'command', 'created_at'])
+
     print('\n[INFO] DB audit check completed successfully.')
 
 except Exception as e:
