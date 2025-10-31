@@ -23,6 +23,7 @@ from datetime import datetime
 from typing import Any, List, Optional
 from datetime import datetime, timezone
 from utils.file_utils import make_run_dir, save_json
+from utils.json_utils import normalize_for_json
 from core.logger import get_logger
 import shlex
 
@@ -115,8 +116,9 @@ def run_network(args: argparse.Namespace, cfg: dict):
         "modules.network"
     ]
     results = dispatch(candidates, target=args.target, scan_type=scan_type, ports=ports, safe_mode=not args.force)
-    if args.output and results:
-        save_json(args.output, results)
+    if args.output and results is not None:
+        # ensure JSON-serializable
+        save_json(args.output, normalize_for_json(results))
     return results
 
 def run_web(args: argparse.Namespace, cfg: dict):
@@ -132,7 +134,7 @@ def run_web(args: argparse.Namespace, cfg: dict):
                             target=args.target, safe_mode=not args.force)
         results['scan'] = scan_res
     if args.output and results:
-        save_json(args.output, results)
+        save_json(args.output, normalize_for_json(results))
     return results if results else True
 
 def run_exploit(args: argparse.Namespace, cfg: dict):
