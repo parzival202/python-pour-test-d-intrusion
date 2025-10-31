@@ -556,7 +556,13 @@ def run(argv: Optional[List[str]] = None):
         if not getattr(args, 'no_persist', False):
             if 'persist_result' in globals() and persist_result and session_id and results:
                 try:
-                    persisted = persist_result(session_id, results)
+                    # Normalize results to a JSON-serializable structure before persisting
+                    try:
+                        normalized_results = normalize_for_json(results)
+                    except Exception:
+                        normalized_results = results
+
+                    persisted = persist_result(session_id, normalized_results)
                     if persisted:
                         if logger_local:
                             logger_local.info(f"[*] Persisted results summary: {persisted}")
