@@ -7,7 +7,7 @@ import sqlite3
 import json
 from pathlib import Path
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # Chemin de la base de données selon les exigences TODO
 DB_DIR = Path("./results")
@@ -102,8 +102,10 @@ def close_session(session_id: str, status: str = 'finished'):
     conn = get_connection()
     c = conn.cursor()
     try:
+        # store timezone-aware UTC timestamp in same format as SQLite CURRENT_TIMESTAMP
+        end_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         c.execute("UPDATE sessions SET status = ?, end_time = ? WHERE session_id = ?",
-                  (status, datetime.utcnow(), session_id))
+                  (status, end_time, session_id))
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -265,12 +267,12 @@ def get_session_summary(session_id: str) -> Dict:
 
 def cleanup_old_sessions(days: int = 30):
     """Supprimer les sessions plus anciennes que le nombre de jours spécifié."""
-    from datetime import timedelta
-    cutoff = datetime.utcnow() - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff_str = cutoff.strftime('%Y-%m-%d %H:%M:%S')
     conn = get_connection()
     c = conn.cursor()
     try:
-        c.execute("DELETE FROM sessions WHERE start_time < ?", (cutoff,))
+        c.execute("DELETE FROM sessions WHERE start_time < ?", (cutoff_str,))
         deleted = c.rowcount
         conn.commit()
         return deleted
